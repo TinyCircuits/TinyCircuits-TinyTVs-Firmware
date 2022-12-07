@@ -61,9 +61,27 @@ int JPEGDraw(JPEGDRAW* block){
         int x = block->x + bx;
         int y = block->y + by;
 
+        float uvx = ((float)x) / ((float)VIDEO_W);
+        float uvy = ((float)y) / ((float)VIDEO_H);
+
+        uvx = uvx * 2.0f - 1.0f;
+        uvy = uvy * 2.0f - 1.0f;
+
+        float offsetx = abs(uvx) / 1.0f;
+        float offsety = abs(uvy) / 1.0f;
+
+        uvx = uvx + uvx * offsetx * offsetx;
+        uvy = uvy + uvy * offsety * offsety;
+
+        uvx = uvx * 0.5 + 0.5;
+        uvy = uvy * 0.5 + 0.5;
+
+        int outx = (int)(uvx * VIDEO_W);
+        int outy = (int)(uvy * VIDEO_H);
+
         // Check that the pixel within the block is within screen bounds and then draw
-        if(x < VIDEO_W && y < VIDEO_H){
-          int bufferIndex = y * VIDEO_W + x;
+        if(outx >=0 && outx < VIDEO_W && outy >= 0 && outy < VIDEO_H){
+          int bufferIndex = outy * VIDEO_W + outx;
           int blockPixelIndex = by * block->iWidth + bx;
           frameBuf[bufferIndex] = ((uint16_t*)block->pPixels)[blockPixelIndex];
         }

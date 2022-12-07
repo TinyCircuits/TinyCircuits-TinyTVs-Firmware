@@ -1,7 +1,7 @@
 #include "screenEffects.h"
 
 
-ScreenEffects::ScreenEffects(uint8_t tinyTVType) : RoundCornerEffect(tinyTVType){
+ScreenEffects::ScreenEffects(uint8_t tinyTVType) : RoundCornerEffect(tinyTVType), StaticEffects(){
 
 }
 
@@ -49,4 +49,59 @@ void RoundCornerEffect::cropCorners(uint16_t *screenBuffer, uint8_t width, uint8
       screenBuffer[bottomRightBufferIndex] = 0;
     }
   }
+}
+
+
+
+StaticEffects::StaticEffects(){
+
+}
+
+
+void StaticEffects::startChangeChannelEffect(){
+  currentStartedEffect = StaticEffects::CHANGE_CHANNEL;
+}
+
+
+void StaticEffects::startTurnOffEffect(){
+  currentStartedEffect = StaticEffects::TURN_OFF;
+}
+
+
+void StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  switch(currentStartedEffect){
+    case StaticEffects::CHANGE_CHANNEL:
+      processChangeChannelEffect(screenBuffer, width, height);
+    break;
+    case StaticEffects::TURN_OFF:
+      processTurnOffEffect(screenBuffer, width, height);
+    break;
+  }
+}
+
+
+void StaticEffects::makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  uint32_t staticPos = 0;
+  while (staticPos < width * height) {
+    uint8_t currentRand = rand();
+    uint8_t currentRandSmall = ((currentRand >> 6 - (rand()) / 2)) & 3;
+    if (currentRandSmall == 3) {
+      ((uint16_t *)screenBuffer)[staticPos] = 0x0861;//black
+    } else if (currentRandSmall == 2) {
+      ((uint16_t *)screenBuffer)[staticPos] = 0xF79E;//white
+    } else if (currentRandSmall == 1) {
+      ((uint16_t *)screenBuffer)[staticPos] = 0x8410;//black/grey
+    }
+    staticPos += (currentRand & 3) + 1;
+  }
+}
+
+
+void StaticEffects::processChangeChannelEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  
+}
+
+
+void StaticEffects::processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  
 }
