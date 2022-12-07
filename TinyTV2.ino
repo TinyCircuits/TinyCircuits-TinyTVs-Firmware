@@ -46,8 +46,8 @@
 #include "hardware/pwm.h"           // RP2040 API
 #include "src/uraster/uraster.hpp"  // Non-video graphics library
 #include "globals_and_buffers.h"    // Big fat statically-allocate-everything header
-#include "shutoffsfx.h"
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
+
 
 void setup() {
   initalizePins();

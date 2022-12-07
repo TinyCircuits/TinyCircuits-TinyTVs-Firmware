@@ -21,6 +21,8 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include "screenEffects.h"
+
 #ifdef DEBUGAPP
 const void dbgPrint(const char* s) {
   Serial.println(s);
@@ -41,6 +43,7 @@ const void dbgPrint(const String& s) {
 SdFat32 sd;
 File32 infile;
 File32 dir;
+ScreenEffects effects(ScreenEffects::TINYTV_2);
 
 
 // PLAYBACK PARAMETERS

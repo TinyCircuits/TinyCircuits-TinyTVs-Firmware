@@ -1,5 +1,3 @@
-
-
 #include <JPEGDEC.h>                // minor customization
 
 JPEGDEC jpeg;
@@ -147,6 +145,7 @@ void core2Loop()
 
   uint64_t t1 = time_us_64();
   // Wait for DMA to finish and then push everything out
+  effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
   tft.dmaWait();
   tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
 
