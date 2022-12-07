@@ -80,7 +80,7 @@ void setup() {
   targetFrameTime = (1000000) / 24;
 
   // Open a video
-  if (doStaticEffects) changeChannelEffect();
+  if (doStaticEffects) effects.startChangeChannelEffect();
   nextVideo();
 
   if (!initPCIInterruptForTinyReceiver()) {
@@ -121,7 +121,7 @@ void loop() {
     if (!TVscreenOffMode) {
       TVscreenOffMode = true;
       TVscreenOffModeStartTime = millis();
-      if (doStaticEffects) changeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       playWhiteNoise = false;
       pauseRadius = 120;
       sampleIndex = 0;
@@ -137,7 +137,7 @@ void loop() {
       clearDisplay();
     } else {
       TVscreenOffMode = false;
-      if (doStaticEffects) changeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       playWhiteNoise = false;
       sampleIndex = 0;
       loadedSampleIndex = sampleIndex;
@@ -159,7 +159,7 @@ void loop() {
     channelUpInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) changeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       nextVideo();
     }
   }
@@ -167,7 +167,7 @@ void loop() {
     channelDownInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) changeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       prevVideo();
     }
   }
@@ -216,7 +216,7 @@ void loop() {
   if (infile.read(chunkHeader, 8) != 8)
   {
     dbgPrint("AVI end / EOF reached or read error");
-    if (doStaticEffects) changeChannelEffect();
+    if (doStaticEffects) effects.startChangeChannelEffect();
     // Find a new video to play or loop
     if (autoplayMode != 0) {
       nextVideo();

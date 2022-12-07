@@ -1,7 +1,7 @@
 #include "screenEffects.h"
 
 
-ScreenEffects::ScreenEffects(uint8_t tinyTVType) : RoundCornerEffect(tinyTVType), StaticEffects(){
+ScreenEffects::ScreenEffects(uint8_t tinyTVType) : StaticEffects(tinyTVType){
 
 }
 
@@ -53,7 +53,7 @@ void RoundCornerEffect::cropCorners(uint16_t *screenBuffer, uint8_t width, uint8
 
 
 
-StaticEffects::StaticEffects(){
+StaticEffects::StaticEffects(uint8_t tinyTVType) : RoundCornerEffect(tinyTVType){
 
 }
 
@@ -68,15 +68,18 @@ void StaticEffects::startTurnOffEffect(){
 }
 
 
-void StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+bool StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height){
   switch(currentStartedEffect){
     case StaticEffects::CHANGE_CHANNEL:
       processChangeChannelEffect(screenBuffer, width, height);
+      return true;
     break;
     case StaticEffects::TURN_OFF:
       processTurnOffEffect(screenBuffer, width, height);
+      return true;
     break;
   }
+  return false;
 }
 
 
@@ -97,8 +100,39 @@ void StaticEffects::makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width,
 }
 
 
+// Three phases
 void StaticEffects::processChangeChannelEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
-  
+  // If at index 0, fill the buffer with a base layer of noise
+  // using the existing pixels to create a sort of transistion,
+  // else, fill with static or gray and then static
+  if(changeChannelFrameIndex == 0){
+    for (uint16_t i=0; i<width*height; i++){
+      // Another magic color from original firmware
+      screenBuffer[i] &= 0b1110011110011100;
+      screenBuffer[i] >>= 2;
+    }
+  }else{
+    if(changeChannelFrameIndex >= 1){
+      for (uint16_t i=0; i<width*height; i++){
+        // Change to magic number color taken from original firmware
+        screenBuffer[i] = (0x8410 & 0b1100011100011000) >> 3;
+      }
+    }
+
+    // Run the static effect on top of the base noise layer/buffer, 5 times
+    for(uint8_t i=0; i<5; i++){
+      makeStaticEffectFrame(screenBuffer, width, height);
+    }
+  }
+  cropCorners(screenBuffer, width, height);
+
+  changeChannelFrameIndex++;
+
+  // End the effect after enough frames (enough meaning, what looks good as an effect)
+  if(changeChannelFrameIndex >= changeChannelFrameCount){
+    changeChannelFrameIndex = 0;
+    currentStartedEffect = StaticEffects::NONE;
+  }
 }
 
 

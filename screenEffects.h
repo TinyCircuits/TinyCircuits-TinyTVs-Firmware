@@ -24,9 +24,9 @@ class RoundCornerEffect{
 };
 
 
-class StaticEffects{
+class StaticEffects: public RoundCornerEffect{
   public:
-    StaticEffects();
+    StaticEffects(uint8_t tinyTVType);
 
     // Start the effect for when the channel is changed (overrides the effect if active)
     void startChangeChannelEffect();
@@ -34,8 +34,8 @@ class StaticEffects{
     // Start the effect for when the TV turns off (overrides the effect if active)
     void startTurnOffEffect();
 
-    // Process either the 'change channel' or 'off' effects
-    void processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height);
+    // Process either the 'change channel' or 'turn off' effects
+    bool processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height);
   private:
     enum{
       NONE=0,
@@ -44,16 +44,20 @@ class StaticEffects{
     };
 
     void makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width, uint8_t height);
-    
     void processChangeChannelEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height);
     void processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height);
 
     uint8_t currentStartedEffect = StaticEffects::NONE;
+
+    uint8_t changeChannelFrameIndex = 0;
+    uint8_t changeChannelFrameCount = 3;
+
+    uint8_t turnOffFrameIndex = 0;
 };
 
 
 // Apply various screen effects to screen buffer like static or round corner cropping
-class ScreenEffects : public RoundCornerEffect, public StaticEffects{
+class ScreenEffects : public StaticEffects{
   public:
     ScreenEffects(uint8_t tinyTVType);
 

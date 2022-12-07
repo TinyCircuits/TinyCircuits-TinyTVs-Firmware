@@ -61,27 +61,9 @@ int JPEGDraw(JPEGDRAW* block){
         int x = block->x + bx;
         int y = block->y + by;
 
-        float uvx = ((float)x) / ((float)VIDEO_W);
-        float uvy = ((float)y) / ((float)VIDEO_H);
-
-        uvx = uvx * 2.0f - 1.0f;
-        uvy = uvy * 2.0f - 1.0f;
-
-        float offsetx = abs(uvx) / 1.0f;
-        float offsety = abs(uvy) / 1.0f;
-
-        uvx = uvx + uvx * offsetx * offsetx;
-        uvy = uvy + uvy * offsety * offsety;
-
-        uvx = uvx * 0.5 + 0.5;
-        uvy = uvy * 0.5 + 0.5;
-
-        int outx = (int)(uvx * VIDEO_W);
-        int outy = (int)(uvy * VIDEO_H);
-
         // Check that the pixel within the block is within screen bounds and then draw
-        if(outx >=0 && outx < VIDEO_W && outy >= 0 && outy < VIDEO_H){
-          int bufferIndex = outy * VIDEO_W + outx;
+        if(x < VIDEO_W && y < VIDEO_H){
+          int bufferIndex = y * VIDEO_W + x;
           int blockPixelIndex = by * block->iWidth + bx;
           frameBuf[bufferIndex] = ((uint16_t*)block->pPixels)[blockPixelIndex];
         }
@@ -97,6 +79,15 @@ int JPEGDraw(JPEGDRAW* block){
 
 void core2Loop()
 {
+  if(effects.processStartedEffects(frameBuf, VIDEO_W, VIDEO_H)){
+    if (soundVolume != 0) playWhiteNoise = true;
+    tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+    tft.dmaWait();
+    return;
+  }else{
+    playWhiteNoise = false;
+  }
+
   char buf[48];
   // Wait for core 1 to get the compressed data ready
   while (!frameReady || TVscreenOffMode)
@@ -239,30 +230,30 @@ void staticEffect()
   }
 }
 
-void changeChannelEffect()
-{
-  if (soundVolume != 0) playWhiteNoise = true;
-  for (int i = 0; i < VIDEO_W * VIDEO_H; i++)
-  {
-    frameBuf[i] &= 0b1110011110011100;
-    frameBuf[i] >>= 2;
-  }
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-  tft.dmaWait();
-  // TODO: Make more convincing
-  for (int i = 0; i < 3; i++)
-  {
-    staticEffect();
-    staticEffect();
-    staticEffect();
-    staticEffect();
-    staticEffect();
-    tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-    tft.dmaWait();
-    //memset(frameBuf, 0, 2*VIDEO_W*VIDEO_H);
-    for (int i = 0; i < VIDEO_W * VIDEO_H; i++) frameBuf[i] = (colorOrMask1 & 0b1100011100011000) >> 3;
-  }
-}
+// void changeChannelEffect()
+// {
+//   if (soundVolume != 0) playWhiteNoise = true;
+//   for (int i = 0; i < VIDEO_W * VIDEO_H; i++)
+//   {
+//     frameBuf[i] &= 0b1110011110011100;
+//     frameBuf[i] >>= 2;
+//   }
+//   tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+//   tft.dmaWait();
+//   // TODO: Make more convincing
+//   for (int i = 0; i < 3; i++)
+//   {
+//     staticEffect();
+//     staticEffect();
+//     staticEffect();
+//     staticEffect();
+//     staticEffect();
+//     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+//     tft.dmaWait();
+//     //memset(frameBuf, 0, 2*VIDEO_W*VIDEO_H);
+//     for (int i = 0; i < VIDEO_W * VIDEO_H; i++) frameBuf[i] = (colorOrMask1 & 0b1100011100011000) >> 3;
+//   }
+// }
 
 void tubeOffEffect() {
   delay(5);
