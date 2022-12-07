@@ -77,8 +77,14 @@ int JPEGDraw(JPEGDRAW* block){
 
 
 
-void core2Loop()
-{
+void core2Loop(){
+  // If the TV is in off mode because the power button was
+  // pressed, do not run this loop (fixes crash and visual
+  // overwriting)
+  if(TVscreenOffMode){
+    return;
+  }
+
   if(effects.processStartedEffects(frameBuf, VIDEO_W, VIDEO_H)){
     if (soundVolume != 0) playWhiteNoise = true;
     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
@@ -230,30 +236,6 @@ void staticEffect()
   }
 }
 
-// void changeChannelEffect()
-// {
-//   if (soundVolume != 0) playWhiteNoise = true;
-//   for (int i = 0; i < VIDEO_W * VIDEO_H; i++)
-//   {
-//     frameBuf[i] &= 0b1110011110011100;
-//     frameBuf[i] >>= 2;
-//   }
-//   tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-//   tft.dmaWait();
-//   // TODO: Make more convincing
-//   for (int i = 0; i < 3; i++)
-//   {
-//     staticEffect();
-//     staticEffect();
-//     staticEffect();
-//     staticEffect();
-//     staticEffect();
-//     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-//     tft.dmaWait();
-//     //memset(frameBuf, 0, 2*VIDEO_W*VIDEO_H);
-//     for (int i = 0; i < VIDEO_W * VIDEO_H; i++) frameBuf[i] = (colorOrMask1 & 0b1100011100011000) >> 3;
-//   }
-// }
 
 void tubeOffEffect() {
   delay(5);
