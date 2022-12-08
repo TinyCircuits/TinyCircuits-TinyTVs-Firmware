@@ -43,7 +43,7 @@ const void dbgPrint(const String& s) {
 SdFat32 sd;
 File32 infile;
 File32 dir;
-ScreenEffects effects(ScreenEffects::TINYTV_2);
+ScreenEffects effects(216, 135);
 
 
 // PLAYBACK PARAMETERS

@@ -1,29 +1,37 @@
 #include "screenEffects.h"
 
 
-ScreenEffects::ScreenEffects(uint8_t tinyTVType) : StaticEffects(tinyTVType){
+ScreenEffects::ScreenEffects(uint8_t width, uint8_t height) : StaticEffects(width, height){
 
 }
 
 
 
-RoundCornerEffect::RoundCornerEffect(uint8_t tinyTVType){
-  if (tinyTVType == ScreenEffects::TINYTV_TYPE::TINYTV_2){
-    cropRadius = tinyTV2CropRadius;
-  }else if (tinyTVType == ScreenEffects::TINYTV_TYPE::TINYTV_MINI){
-    cropRadius = tinyTVMiniCropRadius;
-  }
+RoundCornerEffect::RoundCornerEffect(uint8_t width, uint8_t height){
+  screenWidth = width;
+  screenHeight = height;
 
-  cropRadiusLimits = (uint8_t *)malloc(cropRadius * sizeof(uint8_t));
+  // The max number of limits is the height of the screen (one for each row of pixels)
+  cropRadiusLimitsSize = height/2;
+  cropRadiusLimits = (uint8_t *)malloc(cropRadiusLimitsSize * sizeof(uint8_t));
+
+  // Calculate limits with default cropRadius at first
+  calculateLimits();
+}
+
+
+void RoundCornerEffect::setCropRadius(uint8_t radius){
+  lastCropRadius = cropRadius;
+  cropRadius = radius;
   calculateLimits();
 }
 
 
 void RoundCornerEffect::calculateLimits(){
   // Starting from top-left move down and right each time until reach inside of circle, that's the limit
-  for (int y=0; y<cropRadius; y++){
-    int x = 0;
-    while (x < cropRadius*2){
+  for (uint8_t y=0; y<cropRadius && y<screenHeight/2; y++){
+    uint8_t x = 0;
+    while (x < cropRadius+1){
       if (sqrt(pow(x - cropRadius, 2) + pow(y - cropRadius, 2)) <= cropRadius){
         cropRadiusLimits[y] = x;
         break;
@@ -53,17 +61,19 @@ void RoundCornerEffect::cropCorners(uint16_t *screenBuffer, uint8_t width, uint8
 
 
 
-StaticEffects::StaticEffects(uint8_t tinyTVType) : RoundCornerEffect(tinyTVType){
-
+StaticEffects::StaticEffects(uint8_t width, uint8_t height) : RoundCornerEffect(width, height){
+  turnOffRadiusLimits = (uint8_t*)malloc(height * sizeof(uint8_t)); 
 }
 
 
 void StaticEffects::startChangeChannelEffect(){
+  changeChannelFrameIndex = 0;
   currentStartedEffect = StaticEffects::CHANGE_CHANNEL;
 }
 
 
 void StaticEffects::startTurnOffEffect(){
+  turnOffRadius = 120;
   currentStartedEffect = StaticEffects::TURN_OFF;
 }
 
@@ -85,7 +95,7 @@ bool StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width,
 
 void StaticEffects::makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width, uint8_t height){
   uint32_t staticPos = 0;
-  while (staticPos < width * height) {
+  while (staticPos < width * height){
     uint8_t currentRand = rand();
     uint8_t currentRandSmall = ((currentRand >> 6 - (rand()) / 2)) & 3;
     if (currentRandSmall == 3) {
@@ -100,7 +110,6 @@ void StaticEffects::makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width,
 }
 
 
-// Three phases
 void StaticEffects::processChangeChannelEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
   // If at index 0, fill the buffer with a base layer of noise
   // using the existing pixels to create a sort of transistion,
@@ -130,12 +139,90 @@ void StaticEffects::processChangeChannelEffect(uint16_t *screenBuffer, uint8_t w
 
   // End the effect after enough frames (enough meaning, what looks good as an effect)
   if(changeChannelFrameIndex >= changeChannelFrameCount){
-    changeChannelFrameIndex = 0;
     currentStartedEffect = StaticEffects::NONE;
   }
 }
 
 
 void StaticEffects::processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
-  
+  int xCircle = turnOffRadius / 2;
+  int yCircle = 0;
+  int radiusError = 1 - xCircle;
+
+  // Calculate radius limits for this value of 'turnOffRadius'
+  memset(turnOffRadiusLimits, 0, (height * sizeof(uint8_t)));
+  while (xCircle >= yCircle){
+    turnOffRadiusLimits[64 + yCircle] = xCircle * 3 / 2;
+    turnOffRadiusLimits[64 - yCircle] = xCircle * 3 / 2;
+    turnOffRadiusLimits[64 - xCircle] = yCircle * 3 / 2;
+    turnOffRadiusLimits[64 + xCircle] = yCircle * 3 / 2;
+    yCircle++;
+    if (radiusError < 0){
+      radiusError += 2 * yCircle + 1;
+    }else{
+      xCircle--;
+      radiusError += 2 * (yCircle - xCircle) + 1;
+    }
+  }
+
+  // Generate static between radius limits
+  for (int y = 0; y < height; y++){
+    memset(screenBuffer+(y*width), 0, (width * sizeof(uint16_t)));
+    if (turnOffRadiusLimits[y]){
+      for (int x = width / 2 - turnOffRadiusLimits[y] - 3; x < width / 2 + turnOffRadiusLimits[y] + 3; x) {
+        uint8_t currentRand = rand();
+        uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+        if(x == width / 2 - turnOffRadiusLimits[y] - 3)
+          x += (currentRand & 3);
+        if(currentRandSmall == 3){
+          screenBuffer[(y*width)+x] = 0x0861;//black
+        }else if (currentRandSmall == 2){
+          screenBuffer[(y*width)+x] = 0xF79E;//white
+        }else if (currentRandSmall == 1){
+          screenBuffer[(y*width)+x] = 0x8410;//black/grey
+        }
+        x += (currentRand & 3) * 2;
+      }
+    }
+  }
+
+  // Decrease the radius size to make it get smaller as time goes on
+  turnOffRadius -= turnOffRadius / 8;
+
+  // Generate rectangular 'blip' when radius gets very small
+  if(turnOffRadius < 12){
+    turnOffRadius--;
+    if(turnOffRadius < 6 && turnOffRadius > 3 ){
+      for(int y = height / 2 - 2; y < height / 2 + 1; y++){
+        memset(screenBuffer+(y*width), 0, (width * sizeof(uint16_t)));
+        for(int x = width / 2 - 30; x < width / 2 + 30; x++){
+          uint8_t currentRand = rand();
+          uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+          
+          if(x == width / 2 - turnOffRadiusLimits[y] - 3){
+            x += (currentRand & 3);
+          }
+
+          if(currentRandSmall == 3){
+            screenBuffer[(y*width)+x] = 0x0861;
+          }else if (currentRandSmall == 2){
+            screenBuffer[(y*width)+x] = 0xF79E;
+          }else if (currentRandSmall == 1){
+            screenBuffer[(y*width)+x] = 0x8410;
+          }
+          x += (currentRand & 3) * 2;
+        }
+      }
+    }
+
+    // Vary the speed of the blip as it gets smaller (looks more "dynamic")
+    if(turnOffRadius < 6){
+      delay((6 - turnOffRadius) * 15);
+    }
+  }
+
+  // End the effect
+  if(turnOffRadius <= 0){
+    currentStartedEffect = StaticEffects::NONE;
+  }
 }

@@ -13,6 +13,10 @@ const int VIDEO_X = 24;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 216;
 const int VIDEO_H = 135;
+// const int VIDEO_X = 0;
+// const int VIDEO_Y = 0;
+// const int VIDEO_W = 64;
+// const int VIDEO_H = 64;
 #endif
 
 // Effects need the framebuffer declared first
@@ -78,13 +82,6 @@ int JPEGDraw(JPEGDRAW* block){
 
 
 void core2Loop(){
-  // If the TV is in off mode because the power button was
-  // pressed, do not run this loop (fixes crash and visual
-  // overwriting)
-  if(TVscreenOffMode){
-    return;
-  }
-
   if(effects.processStartedEffects(frameBuf, VIDEO_W, VIDEO_H)){
     if (soundVolume != 0) playWhiteNoise = true;
     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
@@ -188,150 +185,4 @@ void displayUSBMSCmessage() {
   renderer.drawStr(5, 30, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
   renderer.drawStr(5, 40, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
   tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void clearDisplay() {
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  tft.dmaWait();
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-}
-// TV effect colors
-const uint16_t colorOrMask1 = 0x8410;
-const uint16_t colorOrMask2 = 0xC618;
-const uint16_t colorOrMask3 = 0xE71C;
-const uint16_t colorOrMask4 = 0xF79E;
-
-const uint16_t colorAndMask1 = 0x0861;
-const uint16_t colorAndMask2 = 0x18E3;
-const uint16_t colorAndMask3 = 0x39E7;
-const uint16_t colorAndMask4 = 0x7BEF;
-
-void staticEffect()
-{
-  uint32_t staticPos = 0;
-  while (staticPos < VIDEO_W * VIDEO_H) {
-    uint8_t currentRand = rand();
-    uint8_t currentRandSmall = ((currentRand >> 6 - (rand()) / 2)) & 3;
-    if (currentRandSmall == 3) {
-      ((uint16_t *)frameBuf)[staticPos] = colorAndMask1;//black
-    } else if (currentRandSmall == 2) {
-      ((uint16_t *)frameBuf)[staticPos] = colorOrMask4;//white
-    } else if (currentRandSmall == 1) {
-      ((uint16_t *)frameBuf)[staticPos] = colorOrMask1;//black/grey
-    }
-    staticPos += (currentRand & 3) + 1;
-  }
-}
-
-
-void tubeOffEffect() {
-  delay(5);
-  if (pauseRadius) {
-    int xCircle = pauseRadius / 2;
-    int yCircle = 0;
-    int radiusError = 1 - xCircle;
-    int radiusLimits[VIDEO_H];
-    uint16_t staticBuf[VIDEO_W];
-    memset(radiusLimits, 0, sizeof(radiusLimits));
-    while (xCircle >= yCircle) {
-      radiusLimits[64 + yCircle] = xCircle * 3 / 2;
-      radiusLimits[64 - yCircle] = xCircle * 3 / 2;
-      radiusLimits[64 - xCircle] = yCircle * 3 / 2;
-      radiusLimits[64 + xCircle] = yCircle * 3 / 2;
-      yCircle++;
-      if (radiusError < 0)
-      {
-        radiusError += 2 * yCircle + 1;
-      } else {
-        xCircle--;
-        radiusError += 2 * (yCircle - xCircle) + 1;
-      }
-    }
-    // Need a full framebuffer for this to work
-    for (int y = 0; y < VIDEO_H; y++) {
-      tft.dmaWait();
-      memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
-      //tft.readRect(0, y, 240, 1, staticBuf);
-      //tft.setAddrWindow(0, y, 240, 1);
-      for (int x = 0; x < VIDEO_W / 2 - radiusLimits[y]; x++) {
-        ((uint16_t *)staticBuf)[x] = (((uint16_t *)staticBuf)[x] >> 1) & 0x39E7;
-      }
-      for (int x = VIDEO_W / 2 + radiusLimits[y]; x < VIDEO_W; x++) {
-        ((uint16_t *)staticBuf)[x] = (((uint16_t *)staticBuf)[x] >> 1) & 0x39E7;
-      }
-      tft.pushPixelsDMA(staticBuf, VIDEO_W);
-    }
-    memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
-    for (int y = 0; y < VIDEO_H; y++) {
-      tft.dmaWait();
-      memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
-      //tft.readRect(0, y, 240, 1, staticBuf);
-      //tft.setAddrWindow(0, y, 240, 1);
-      if (radiusLimits[y]) {
-        for (int x = VIDEO_W / 2 - radiusLimits[y] - 3; x < VIDEO_W / 2 + radiusLimits[y] + 3; x) {
-          uint8_t currentRand = rand();
-          uint8_t currentRandSmall = ((currentRand >> 4) & 3);
-          if (x == VIDEO_W / 2 - radiusLimits[y] - 3)
-            x += (currentRand & 3);
-          if (currentRandSmall == 3) {
-            ((uint16_t *)staticBuf)[x] = colorAndMask1;//black
-          } else if (currentRandSmall == 2) {
-            ((uint16_t *)staticBuf)[x] = colorOrMask4;//white
-          } else if (currentRandSmall == 1) {
-            ((uint16_t *)staticBuf)[x] = colorOrMask1;//black/grey
-          }
-          x += (currentRand & 3) * 2;
-        }
-      }
-      tft.pushPixelsDMA(staticBuf, VIDEO_W);
-    }
-    pauseRadius -= pauseRadius / 8;
-    if (pauseRadius < 12) {
-      pauseRadius--;
-
-      if (pauseRadius < 6 && pauseRadius > 3 ) {
-        for (int y = VIDEO_H / 2 - 2; y < VIDEO_H / 2 + 1; y++) {
-          tft.dmaWait();
-          memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
-          for (int x = VIDEO_W / 2 - 30; x < VIDEO_W / 2 + 30; x++) {
-            uint8_t currentRand = rand();
-            uint8_t currentRandSmall = ((currentRand >> 4) & 3);
-            if (x == VIDEO_W / 2 - radiusLimits[y] - 3)
-              x += (currentRand & 3);
-            if (currentRandSmall == 3) {
-              ((uint16_t *)staticBuf)[x] = colorAndMask1;//black
-            } else if (currentRandSmall == 2) {
-              ((uint16_t *)staticBuf)[x] = colorOrMask4;//white
-            } else if (currentRandSmall == 1) {
-              ((uint16_t *)staticBuf)[x] = colorOrMask1;//black/grey
-            }
-            x += (currentRand & 3) * 2;
-          }
-          tft.setAddrWindow(VIDEO_X, y, VIDEO_W, 1);
-          tft.pushPixelsDMA(staticBuf, VIDEO_W);
-        }
-      }
-      if (pauseRadius < 6) {
-        delay((6 - pauseRadius) * 15);
-      }
-    }
-    if (pauseRadius <= 0) {
-      pauseRadius = 0;
-      //memset(buffer, 0, sizeof(buffer));
-    }
-  }
-  tft.setAddrWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
 }

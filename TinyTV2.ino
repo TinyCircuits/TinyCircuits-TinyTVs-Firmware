@@ -79,6 +79,9 @@ void setup() {
   setAudioSampleRate(10000);
   targetFrameTime = (1000000) / 24;
 
+  // Set crop radius to TinyTV 2's best looking value;
+  effects.setCropRadius(25);
+
   // Open a video
   if (doStaticEffects) effects.startChangeChannelEffect();
   nextVideo();
@@ -115,26 +118,18 @@ void loop() {
   // Hardware encoder/button input
   updateButtonStates();
 
+
   // Handle any input flags
   if (powerInput) {
     powerInput = false;
     if (!TVscreenOffMode) {
       TVscreenOffMode = true;
       TVscreenOffModeStartTime = millis();
-      if (doStaticEffects) effects.startChangeChannelEffect();
       playWhiteNoise = false;
       pauseRadius = 120;
       sampleIndex = 0;
       loadedSampleIndex = sampleIndex;
-      //sampleIndex = 0;
-      //loadedSampleIndex = AUDIOBUF_SIZE - 1;
-      //memset(audioBuf, 127, AUDIOBUF_SIZE);
-      //memcpy(audioBuf, shutoff, AUDIOBUF_SIZE);
-      //sleep_ms(100);//wait to play?
-      while (pauseRadius > 3) tubeOffEffect();
-      //      digitalWrite(9, HIGH);
-      //?digitalWrite(SPK_EN, LOW);
-      clearDisplay();
+      effects.startTurnOffEffect();
     } else {
       TVscreenOffMode = false;
       if (doStaticEffects) effects.startChangeChannelEffect();
@@ -143,10 +138,6 @@ void loop() {
       loadedSampleIndex = sampleIndex;
       showChannelTimer = 120;
       paused = false;
-
-      //tsMillisInitial += millis() - lowPowerStartTime;
-      ////    digitalWrite(9, LOW);
-      //if (!mute) digitalWrite(SPK_EN, HIGH);
     }
   }
   if (muteInput) {
