@@ -40,6 +40,8 @@ class StaticEffects: public RoundCornerEffect{
     // Start the effect for when the TV turns off (overrides the effect if active)
     void startTurnOffEffect();
 
+    void stopEffects();
+
     // Process either the 'change channel' or 'turn off' effects
     bool processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height);
   private:
@@ -67,7 +69,6 @@ class StaticEffects: public RoundCornerEffect{
 class ScreenEffects : public StaticEffects{
   public:
     ScreenEffects(uint8_t width, uint8_t height);
-
   private:
 };
 

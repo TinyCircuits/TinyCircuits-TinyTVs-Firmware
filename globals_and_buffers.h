@@ -92,11 +92,6 @@ volatile int loadedSampleIndex = 0;
 
 
 
-
-// For tube off effect
-int pauseRadius = 0;
-
-
 // Sample playback stuff. All of this should be volatile because we do scary stuff in ISR
 
 volatile int soundVolume = 64;

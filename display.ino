@@ -13,10 +13,6 @@ const int VIDEO_X = 24;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 216;
 const int VIDEO_H = 135;
-// const int VIDEO_X = 0;
-// const int VIDEO_Y = 0;
-// const int VIDEO_W = 64;
-// const int VIDEO_H = 64;
 #endif
 
 // Effects need the framebuffer declared first
@@ -86,87 +82,82 @@ void core2Loop(){
     if (soundVolume != 0) playWhiteNoise = true;
     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
     tft.dmaWait();
-    return;
   }else{
     playWhiteNoise = false;
-  }
 
-  char buf[48];
-  // Wait for core 1 to get the compressed data ready
-  while (!frameReady || TVscreenOffMode)
-  {
-    sleep_us(400);
-    //dbgPrint("Core 2 wait spinning");
-  }
-  uint64_t t0 = time_us_64();
-  decodingFrame = true;
-  if (!jpeg.openRAM((uint8_t*)videoBuf[1 - currentWriteBuf], decoderDataLength, JPEGDraw))
-  {
-    dbgPrint("Could not open frame from RAM!");
-  }
-  jpeg.setPixelType(RGB565_LITTLE_ENDIAN);
-  jpeg.setMaxOutputSize(2048);
-  tft.setAddrWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
+    if(!TVscreenOffMode && frameReady){
+      char buf[48];
 
-  jpeg.decode(0, 0, 0); // Weakest link and largest overhead
-
-
-
-
-  // Render stylizations
-  if (showChannelNumber) {
-    if ( showChannelTimer ) {
-      sprintf(buf, "CH%.2i", channelNumber);
-      if (VIDEO_H > 64) {
-        renderer.drawStr( VIDEO_W - 50, 10, buf, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-      } else {
-        renderer.drawStr(VIDEO_W - 25, 5, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+      uint64_t t0 = time_us_64();
+      decodingFrame = true;
+      if (!jpeg.openRAM((uint8_t*)videoBuf[1 - currentWriteBuf], decoderDataLength, JPEGDraw))
+      {
+        dbgPrint("Could not open frame from RAM!");
       }
-      showChannelTimer--;
+      jpeg.setPixelType(RGB565_LITTLE_ENDIAN);
+      jpeg.setMaxOutputSize(2048);
+      tft.setAddrWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
+
+      jpeg.decode(0, 0, 0); // Weakest link and largest overhead
+
+
+
+      // Render stylizations
+      if (showChannelNumber) {
+        if ( showChannelTimer ) {
+          sprintf(buf, "CH%.2i", channelNumber);
+          if (VIDEO_H > 64) {
+            renderer.drawStr( VIDEO_W - 50, 10, buf, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
+          } else {
+            renderer.drawStr(VIDEO_W - 25, 5, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+          }
+          showChannelTimer--;
+        }
+      }
+      if (timeStamp && autoplayMode != 2)
+      {
+        uint64_t _t = ((millis() - tsMillisInitial));
+        int h = (_t / 3600000);
+        int m = (_t / 60000) % 60;
+        int s = (_t / 1000) % 60;
+        sprintf(buf, "%.2i : %.2i : %.2i", h, m, s);
+        renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+      }
+
+      if (showVolumeTimer > 0)
+      {
+        char volumeString[] = "|---------|";
+        volumeString[1 + (soundVolume * 8) / 255] = '+';
+        if (timeStamp) {
+          renderer.drawStr(VIDEO_W - strlen(volumeString) * 5, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        } else {
+          if (VIDEO_H > 64) {
+            renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
+          } else {
+            renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+          }
+        }
+        showVolumeTimer--;
+      }
+
+
+
+
+
+      uint64_t t1 = time_us_64();
+      // Wait for DMA to finish and then push everything out
+      effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
+      tft.dmaWait();
+      tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+
+      decodingFrame = false;
+
+      // Set the frameReady flag to false so core 1 knows we need another frame to decode
+      frameReady = false;
+
+      //dbgPrint("took " + String(uint32_t(t1 - t0)) + "us");
     }
   }
-  if (timeStamp && autoplayMode != 2)
-  {
-    uint64_t _t = ((millis() - tsMillisInitial));
-    int h = (_t / 3600000);
-    int m = (_t / 60000) % 60;
-    int s = (_t / 1000) % 60;
-    sprintf(buf, "%.2i : %.2i : %.2i", h, m, s);
-    renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  }
-
-  if (showVolumeTimer > 0)
-  {
-    char volumeString[] = "|---------|";
-    volumeString[1 + (soundVolume * 8) / 255] = '+';
-    if (timeStamp) {
-      renderer.drawStr(VIDEO_W - strlen(volumeString) * 5, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    } else {
-      if (VIDEO_H > 64) {
-        renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-      } else {
-        renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-      }
-    }
-    showVolumeTimer--;
-  }
-
-
-
-
-
-  uint64_t t1 = time_us_64();
-  // Wait for DMA to finish and then push everything out
-  effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
-  tft.dmaWait();
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-
-  decodingFrame = false;
-
-  // Set the frameReady flag to false so core 1 knows we need another frame to decode
-  frameReady = false;
-
-  //dbgPrint("took " + String(uint32_t(t1 - t0)) + "us");
 }
 
 

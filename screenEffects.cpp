@@ -78,6 +78,11 @@ void StaticEffects::startTurnOffEffect(){
 }
 
 
+void StaticEffects::stopEffects(){
+  currentStartedEffect = StaticEffects::NONE;
+}
+
+
 bool StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height){
   switch(currentStartedEffect){
     case StaticEffects::CHANGE_CHANNEL:

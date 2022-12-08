@@ -83,7 +83,7 @@ void setup() {
   effects.setCropRadius(25);
 
   // Open a video
-  if (doStaticEffects) effects.startChangeChannelEffect();
+  // if (doStaticEffects) effects.startChangeChannelEffect();
   nextVideo();
 
   if (!initPCIInterruptForTinyReceiver()) {
@@ -126,11 +126,11 @@ void loop() {
       TVscreenOffMode = true;
       TVscreenOffModeStartTime = millis();
       playWhiteNoise = false;
-      pauseRadius = 120;
       sampleIndex = 0;
       loadedSampleIndex = sampleIndex;
       effects.startTurnOffEffect();
     } else {
+      effects.stopEffects();
       TVscreenOffMode = false;
       if (doStaticEffects) effects.startChangeChannelEffect();
       playWhiteNoise = false;
