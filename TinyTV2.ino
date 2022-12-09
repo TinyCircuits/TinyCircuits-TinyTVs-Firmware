@@ -29,7 +29,7 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-//#define TinyTVMini 0
+// #define TinyTVMini 1
 
 // Uncomment to compile debug version
 //#define DEBUGAPP (true)
@@ -80,7 +80,11 @@ void setup() {
   targetFrameTime = (1000000) / 24;
 
   // Set crop radius to TinyTV 2's best looking value;
-  effects.setCropRadius(25);
+  #ifdef TinyTVMini
+    effects.setCropRadius(8);
+  #else
+    effects.setCropRadius(25);
+  #endif
 
   // Open a video
   // if (doStaticEffects) effects.startChangeChannelEffect();

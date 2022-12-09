@@ -18,15 +18,15 @@ class RoundCornerEffect{
     // Default to minimum (works well on mini)
     uint8_t cropRadius = 5;
     uint8_t lastCropRadius = cropRadius;
+    
+    uint8_t screenWidth;
+    uint8_t screenHeight;
   private:
     void calculateLimits();
 
     // Array of x radius limits allocated and calculated on class initialization
     uint8_t *cropRadiusLimits;
     uint8_t cropRadiusLimitsSize;
-
-    uint8_t screenWidth;
-    uint8_t screenHeight;
 };
 
 

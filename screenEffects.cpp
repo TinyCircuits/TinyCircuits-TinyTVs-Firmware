@@ -73,7 +73,11 @@ void StaticEffects::startChangeChannelEffect(){
 
 
 void StaticEffects::startTurnOffEffect(){
-  turnOffRadius = 120;
+  if(screenHeight > 64){
+    turnOffRadius = 120;
+  }else{
+    turnOffRadius = 35;
+  }
   currentStartedEffect = StaticEffects::TURN_OFF;
 }
 
@@ -150,17 +154,18 @@ void StaticEffects::processChangeChannelEffect(uint16_t *screenBuffer, uint8_t w
 
 
 void StaticEffects::processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height){
-  int xCircle = turnOffRadius / 2;
+  int xCircle = turnOffRadius/2;
   int yCircle = 0;
-  int radiusError = 1 - xCircle;
+  int radiusError = 1-xCircle;
+  uint8_t halfHeight = height/2;
 
   // Calculate radius limits for this value of 'turnOffRadius'
-  memset(turnOffRadiusLimits, 0, (height * sizeof(uint8_t)));
-  while (xCircle >= yCircle){
-    turnOffRadiusLimits[64 + yCircle] = xCircle * 3 / 2;
-    turnOffRadiusLimits[64 - yCircle] = xCircle * 3 / 2;
-    turnOffRadiusLimits[64 - xCircle] = yCircle * 3 / 2;
-    turnOffRadiusLimits[64 + xCircle] = yCircle * 3 / 2;
+  memset(turnOffRadiusLimits, 0, (height*sizeof(uint8_t)));
+  while(xCircle >= yCircle){
+    turnOffRadiusLimits[halfHeight + yCircle] = xCircle * 3 / 2;
+    turnOffRadiusLimits[halfHeight - yCircle] = xCircle * 3 / 2;
+    turnOffRadiusLimits[halfHeight - xCircle] = yCircle * 3 / 2;
+    turnOffRadiusLimits[halfHeight + xCircle] = yCircle * 3 / 2;
     yCircle++;
     if (radiusError < 0){
       radiusError += 2 * yCircle + 1;
@@ -172,9 +177,11 @@ void StaticEffects::processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, 
 
   // Generate static between radius limits
   for (int y = 0; y < height; y++){
-    memset(screenBuffer+(y*width), 0, (width * sizeof(uint16_t)));
+    memset(screenBuffer+(y*width), 0, (width*sizeof(uint16_t)));
     if (turnOffRadiusLimits[y]){
-      for (int x = width / 2 - turnOffRadiusLimits[y] - 3; x < width / 2 + turnOffRadiusLimits[y] + 3; x) {
+      uint8_t min = (width/2) - turnOffRadiusLimits[y];
+      uint8_t max = (width/2) + turnOffRadiusLimits[y];
+      for(uint8_t x=min; x<max; x++){
         uint8_t currentRand = rand();
         uint8_t currentRandSmall = ((currentRand >> 4) & 3);
         if(x == width / 2 - turnOffRadiusLimits[y] - 3)
@@ -200,7 +207,7 @@ void StaticEffects::processTurnOffEffect(uint16_t *screenBuffer, uint8_t width, 
     if(turnOffRadius < 6 && turnOffRadius > 3 ){
       for(int y = height / 2 - 2; y < height / 2 + 1; y++){
         memset(screenBuffer+(y*width), 0, (width * sizeof(uint16_t)));
-        for(int x = width / 2 - 30; x < width / 2 + 30; x++){
+        for(int x = width / 2 - (width/8); x < width / 2 + (width/8); x++){
           uint8_t currentRand = rand();
           uint8_t currentRandSmall = ((currentRand >> 4) & 3);
           
