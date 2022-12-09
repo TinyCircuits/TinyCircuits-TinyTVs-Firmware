@@ -43,7 +43,12 @@ const void dbgPrint(const String& s) {
 SdFat32 sd;
 File32 infile;
 File32 dir;
-ScreenEffects effects(216, 135);
+
+#ifdef TinyTVMini
+  ScreenEffects effects(64, 64);
+#else
+  ScreenEffects effects(216, 135);
+#endif
 
 
 // PLAYBACK PARAMETERS
