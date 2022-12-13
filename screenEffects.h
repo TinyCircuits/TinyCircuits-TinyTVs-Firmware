@@ -46,7 +46,7 @@ class StaticEffects: public RoundCornerEffect{
     bool processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height);
   private:
     enum{
-      NONE=0,
+      NONE = 0,
       CHANGE_CHANNEL,
       TURN_OFF,
     };
