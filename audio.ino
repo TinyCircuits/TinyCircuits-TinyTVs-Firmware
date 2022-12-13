@@ -77,7 +77,7 @@ int audioSamplesInBuffer() {
 }
 
 void addToAudioBuffer(uint8_t * tempBuffer, int len) {
-  //Serial.println(audioSamplesInBuffer());
+  //cdc.println(audioSamplesInBuffer());
   if (len < AUDIOBUF_SIZE) {
     int readLen = 0;
     noInterrupts();

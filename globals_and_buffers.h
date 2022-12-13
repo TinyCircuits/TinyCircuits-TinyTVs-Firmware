@@ -21,14 +21,12 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include "screenEffects.h"
-
 #ifdef DEBUGAPP
 const void dbgPrint(const char* s) {
-  Serial.println(s);
+  cdc.println(s);
 }
 const void dbgPrint(const String& s) {
-  Serial.println(s);
+  cdc.println(s);
 }
 #else
 const void dbgPrint(const char* s) {
@@ -43,11 +41,17 @@ const void dbgPrint(const String& s) {
 SdFat32 sd;
 File32 infile;
 File32 dir;
+JPEGDEC jpeg;
+TFT_eSPI tft = TFT_eSPI();
+Adafruit_USBD_MSC usb_msc;
+Adafruit_USBD_CDC cdc;
 
 #ifdef TinyTVMini
   ScreenEffects effects(64, 64);
+  JPEGStreamer streamer(&jpeg, &cdc, 1);
 #else
   ScreenEffects effects(216, 135);
+  JPEGStreamer streamer(&jpeg, &cdc, 0);
 #endif
 
 const int VIDEOBUF_SIZE = 1024 * 20;

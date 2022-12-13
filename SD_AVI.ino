@@ -67,7 +67,7 @@ int readNextChunk(uint8_t * dest, int maxLen) {
 
 
   if (chunkLen != chunkRead) {
-    Serial.println("chunkskip ?" );
+    cdc.println("chunkskip ?" );
     infile.seekCur(chunkLen - chunkRead);
   }
 
@@ -288,7 +288,7 @@ int cmpstr(void const *a, void const *b) {
 int loadVideoList() {
   infile.close();
   if (!dir.open("/", O_RDONLY)) {
-    Serial.println("SD read error?");
+    cdc.println("SD read error?");
   }
   dir.rewind();
   char fileName[100];
@@ -306,13 +306,13 @@ int loadVideoList() {
   }
   int count = aviCount;
   for (int i = 0; i < aviCount; i++) {
-    Serial.println(aviList[i]);
+    cdc.println(aviList[i]);
   }
 
   if (alphabetizedPlaylist) {
     qsort(aviList, aviCount, sizeof(aviList[0]), cmpstr);
     for (int i = 0; i < aviCount; i++) {
-      Serial.println(aviList[i]);
+      cdc.println(aviList[i]);
     }
   }
   dir.close();

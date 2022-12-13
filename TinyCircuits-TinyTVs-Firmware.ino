@@ -45,6 +45,9 @@
 #include <JPEGDEC.h>                // minor customization
 #include "hardware/pwm.h"           // RP2040 API
 #include "src/uraster/uraster.hpp"  // Non-video graphics library
+#include <Adafruit_TinyUSB.h>
+#include "screenEffects.h"
+#include "JPEGStreamer.h"
 #include "globals_and_buffers.h"    // Big fat statically-allocate-everything header
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
 
@@ -56,7 +59,10 @@ uint64_t TVscreenOffModeStartTime = 0;
 
 void setup() {
   initalizePins();
-  Serial.begin(115200);
+  
+  Serial.end();
+  cdc.begin(0);
+
   // Do MSC setup quickly so PC recognizes us as a mass storage device
   USBMSCInit();
   initializeDisplay();
@@ -100,7 +106,7 @@ void setup() {
 
 
   if (!initPCIInterruptForTinyReceiver()) {
-    Serial.println("No interrupt available for IR_INPUT_PIN");
+    cdc.println("No interrupt available for IR_INPUT_PIN");
   }
 
 }
@@ -141,6 +147,10 @@ void loop() {
 
   // IR remote using NEC codes for next/previous channel, volume up and down, and mute
   IRInput();
+
+  // This needs called all the time to consume potential serial data and switch to live mode
+  streamer.fillBuffers(videoBuf[0], videoBuf[1], sizeof(videoBuf[0])/sizeof(videoBuf[0][0]));
+
   // Hardware encoder/button input
   updateButtonStates();
 
@@ -183,7 +193,7 @@ void loop() {
     channelUpInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) effects.startChangeChannelEffect();
+      if (doStaticEffects && !streamer.live) effects.startChangeChannelEffect();
       if (nextVideo()) {
         nextVideoError = millis();
       } else {
@@ -195,7 +205,7 @@ void loop() {
     channelDownInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) effects.startChangeChannelEffect();
+      if (doStaticEffects && !streamer.live) effects.startChangeChannelEffect();
       if (prevVideo()) {
         prevVideoError = millis();
       } else {
@@ -225,6 +235,10 @@ void loop() {
     if (millis() - TVscreenOffModeStartTime > 1000 * 60 * 2) {
       digitalWrite(20, HIGH);
     }
+    return;
+  }
+
+  if(streamer.live){
     return;
   }
 
@@ -268,7 +282,7 @@ void loop() {
 
   if (isAVIStreamAvailable()) {
     uint32_t len = nextChunkLength();
-    //Serial.println(len);
+    //cdc.println(len);
     if (len > 0) {
       if (isNextChunkAudio()) {
         // Found a chunk of audio, load it into the buffer
@@ -283,8 +297,8 @@ void loop() {
           JPEGBufferFilled(len);
         }
       } else {
-        Serial.print("chunk unrecognized ");
-        Serial.println(len);
+        cdc.print("chunk unrecognized ");
+        cdc.println(len);
         if (autoplayMode != 0) {
           nextVideo();
         } else {
@@ -315,14 +329,14 @@ void loop() {
 }
 
 bool frameWaitDurationElapsed() {
-  //Serial.print(audioSamplesInBuffer());
+  //cdc.print(audioSamplesInBuffer());
   if ((int64_t(time_us_64() - framerateHelper) < (targetFrameTime - 5000))) {
     delay(1);
     yield();
     return false;
   }
-  //Serial.print(" ");
-  //Serial.println(audioSamplesInBuffer());
+  //cdc.print(" ");
+  //cdc.println(audioSamplesInBuffer());
   if (audioSamplesInBuffer() > 1000) {
     delay(1);
     yield();

@@ -1,9 +1,5 @@
-
-
 #include <JPEGDEC.h>                // minor customization
 
-JPEGDEC jpeg;
-TFT_eSPI tft = TFT_eSPI();
 
 #ifdef TinyTVMini
 const int VIDEO_X = 0;
@@ -88,7 +84,7 @@ volatile uint32_t lastBufferAssignment = 0;
 void resetBuffers() {
   frameReady[0] = false; frameReady[1] = false;
   frameDecoded[0] = true; frameDecoded[1] = true;
-  Serial.println("resetBuffers");
+  cdc.println("resetBuffers");
 }
 
 uint8_t * getFreeJPEGBuffer() {
@@ -165,7 +161,6 @@ int decodeJPEGIfAvailable() {
 
 
 void core2Loop(){
-
   if(effects.processStartedEffects(frameBuf, VIDEO_W, VIDEO_H)){
     if (soundVolume != 0) playWhiteNoise = true;
     tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
@@ -177,13 +172,13 @@ void core2Loop(){
       return;
     }
 
-    if (decodeJPEGIfAvailable()) {
+    if (!streamer.live && decodeJPEGIfAvailable()) {
       return;
     }
 
     char buf[48];
     // Render stylizations
-    if (showChannelNumber) {
+    if (showChannelNumber && !streamer.live) {
       if ( showChannelTimer ) {
         sprintf(buf, "CH%.2i", channelNumber);
         if (VIDEO_H > 64) {
@@ -222,6 +217,13 @@ void core2Loop(){
         }
       }
       showVolumeTimer--;
+    }
+
+    if(streamer.live){
+      streamer.decode(videoBuf[0], videoBuf[1], frameBuf, JPEGDraw);
+      effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
+      writeScreenBuffer();
+      return;
     }
 
     writeScreenBuffer();

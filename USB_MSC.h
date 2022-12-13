@@ -22,8 +22,6 @@
 */
 
 
-#include <Adafruit_TinyUSB.h>
-Adafruit_USBD_MSC usb_msc;
 bool ejected = false;
 bool mscStart = false;
 bool fs_flushed = false;
@@ -51,9 +49,9 @@ const bool secondCoreSD = false;
 
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-  Serial.print("Reading "); Serial.print(bufsize); Serial.print(" from "); Serial.println(lba);
+  cdc.print("Reading "); cdc.print(bufsize); cdc.print(" from "); cdc.println(lba);
   //  if (!mscActive) {
-  //    Serial.print("skipping\n");
+  //    cdc.print("skipping\n");
   //    return 0;
   //  }
   if (secondCoreSD) {
@@ -74,9 +72,9 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
-  Serial.print("Writing "); Serial.print(bufsize); Serial.print(" to "); Serial.println(lba);
+  cdc.print("Writing "); cdc.print(bufsize); cdc.print(" to "); cdc.println(lba);
   //  if (!mscActive) {
-  //    Serial.print("skipping\n");
+  //    cdc.print("skipping\n");
   //    return 0;
   //  }
   if (secondCoreSD) {
@@ -96,7 +94,7 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 // used to flush any pending cache.
 void msc_flush_cb(void)
 {
-  Serial.println("flush CB");
+  cdc.println("flush CB");
   if (secondCoreSD) {
     fs_flushed = true;
   } else {
