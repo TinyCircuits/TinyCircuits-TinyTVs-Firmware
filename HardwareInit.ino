@@ -95,9 +95,12 @@ int initializeSDcard() {
   SPI.setSCK(SD_SCK);
   SPI.setCS(SD_CS);
   SPI.begin(true);  //check argument?
-  return sd.begin(SD_CONFIG);
+  return sd.cardBegin(SD_CONFIG);
 }
 
+int initializeFS(){
+  return sd.volumeBegin();
+}
 
 
 void handleReceivedTinyIRData(uint16_t aAddress, uint8_t aCommand, bool isRepeat)

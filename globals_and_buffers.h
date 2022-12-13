@@ -50,15 +50,15 @@ File32 dir;
   ScreenEffects effects(216, 135);
 #endif
 
+const int VIDEOBUF_SIZE = 1024 * 20;
+uint8_t videoBuf[2][VIDEOBUF_SIZE];
+
 
 // PLAYBACK PARAMETERS
-uint64_t TVscreenOffModeStartTime = 0;
 uint64_t targetFrameTime;
 
 
 
-bool decodingFrame = false;
-bool frameReady = false;
 bool paused = false;
 
 // SETTINGS DEFAULTS
@@ -68,6 +68,7 @@ bool doStaticEffects = true;
 bool showChannelNumber = true;
 bool alphabetizedPlaylist = true;
 
+// Input Flags
 bool TVscreenOffMode = false;
 bool channelUpInput = false;
 bool channelDownInput = false;
@@ -83,24 +84,15 @@ uint64_t tsMillisInitial = 0;
 int showVolumeTimer = 0;
 uint64_t framerateHelper = 0;
 
-int decoderDataLength = 0;
-uint8_t currentWriteBuf = 0;
-const int VIDEOBUF_SIZE = 1024 * 12;
-uint8_t videoBuf[2][VIDEOBUF_SIZE];
 
-// Audio buffer and size
-const uint32_t AUDIOBUF_SIZE = 1024 * 8;
-uint8_t audioBuf[AUDIOBUF_SIZE] = {127};
 
-volatile int sampleIndex = 0;
-volatile int loadedSampleIndex = 0;
 
+// For tube off effect
+int pauseRadius = 0;
 
 
 // Sample playback stuff. All of this should be volatile because we do scary stuff in ISR
 
 volatile int soundVolume = 64;
-volatile int samplesPerFrame = 417;
 volatile bool playWhiteNoise = false;
-volatile bool videoHasAudio = false;
 volatile bool seekLivePos = false;

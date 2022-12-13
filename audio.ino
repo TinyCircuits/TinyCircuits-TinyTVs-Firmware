@@ -21,6 +21,12 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
+const uint32_t AUDIOBUF_SIZE = 1024 * 8;
+uint8_t audioBuf[AUDIOBUF_SIZE] = {127};
+
+volatile int sampleIndex = 0;
+volatile int loadedSampleIndex = 0;
+
 int audioPinPWMSliceNumber = 0;
 int interruptPWMSliceNumber = 0;
 
@@ -57,12 +63,36 @@ void setAudioSampleRate(int sr) {
   pwm_init(interruptPWMSliceNumber, &configInt, true);
 }
 
+void clearAudioBuffer() {
+  sampleIndex = 0;
+  loadedSampleIndex = sampleIndex;
+}
+
 int audioSamplesInBuffer() {
   int samples = loadedSampleIndex - sampleIndex;
   if (samples < 0) {
     samples += AUDIOBUF_SIZE;
   }
   return samples;
+}
+
+void addToAudioBuffer(uint8_t * tempBuffer, int len) {
+  //Serial.println(audioSamplesInBuffer());
+  if (len < AUDIOBUF_SIZE) {
+    int readLen = 0;
+    noInterrupts();
+    while (len - readLen > 0) {
+      int numBytes = min(AUDIOBUF_SIZE - loadedSampleIndex, len - readLen);
+      memcpy((uint8_t*)audioBuf + (loadedSampleIndex), tempBuffer, numBytes);
+      readLen += numBytes;
+      loadedSampleIndex += numBytes;
+      if ((loadedSampleIndex) >= AUDIOBUF_SIZE)
+      {
+        loadedSampleIndex -= AUDIOBUF_SIZE;
+      }
+    }
+    interrupts();
+  }
 }
 
 void pwmInterruptHandler(void) {
@@ -80,6 +110,6 @@ void pwmInterruptHandler(void) {
       sampleIndex -= AUDIOBUF_SIZE;
   }
   // Clear the interrupt
-  pwm_clear_irq(pwm_gpio_to_slice_num(AUDIO_PIN) + 1);
+  pwm_clear_irq(interruptPWMSliceNumber);
   return;
 }

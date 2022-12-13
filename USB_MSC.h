@@ -24,41 +24,49 @@
 
 #include <Adafruit_TinyUSB.h>
 Adafruit_USBD_MSC usb_msc;
-FatVolume* msc_vol;
 bool ejected = false;
-
+bool mscStart = false;
 bool fs_flushed = false;
-uint64_t last_write = 0;
+bool mscActive = false;
 
-uint32_t lbaToRead = 0;
-uint8_t* lbaToReadPos = NULL;
-uint32_t lbaToReadCount = 0;
-
-uint32_t lbaToWrite = 0;
-uint8_t lbaToWritePos = 0;
-uint32_t lbaToWriteCount = 0;
-
+volatile uint32_t lbaToRead = 0;
+volatile uint8_t* lbaToReadPos = NULL;
+volatile uint32_t lbaToReadCount = 0;
+volatile uint32_t lbaToWrite = 0;
+volatile uint8_t lbaToWritePos = 0;
+volatile uint32_t lbaToWriteCount = 0;
 uint8_t lbaWriteBuff[512 * 8];
 
-void _sdWait()
-{
-  while (sd.card()->isBusy()) {
-    delay(1);
-  }
-  return;
-}
+uint32_t sectorLBACount = 1;
+
+const bool secondCoreSD = false;
+
+//void _sdWait()
+//{
+//  while (sd.card()->isBusy()) {
+//    delay(1);
+//  }
+//  return;
+//}
 
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-  //Serial.println("Reading from " + String(lba));
-  const int32_t ret = sd.card()->readSectors(lba, (uint8_t*) buffer, (bufsize >> 9)) ? bufsize : -1;
-  return ret;
-  //  int count = bufsize / 512;
-  //  const int32_t ret = sd.card()->readSectors(lba, (uint8_t*) buffer, 1) ? bufsize : -1;
-  //  lbaToRead = lba + 1;
-  //  lbaToReadPos = (uint8_t*)buffer + 512;
-  //  lbaToReadCount = count - 1;
-  //  return bufsize;
+  Serial.print("Reading "); Serial.print(bufsize); Serial.print(" from "); Serial.println(lba);
+  //  if (!mscActive) {
+  //    Serial.print("skipping\n");
+  //    return 0;
+  //  }
+  if (secondCoreSD) {
+    while (lbaToWriteCount || lbaToReadCount);
+    volatile int count = bufsize / 512;
+    lbaToRead = lba * sectorLBACount;
+    lbaToReadPos = (uint8_t*)buffer;
+    lbaToReadCount = count;
+    while (lbaToReadCount == count) {};
+    return bufsize;
+  } else {
+    return sd.card()->readSectors(lba * sectorLBACount, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
+  }
 }
 
 // Callback invoked when received WRITE10 command.
@@ -66,24 +74,35 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
-  const int32_t ret = (sd.card()->writeSectors(lba, buffer, (bufsize >> 9)) == true) ? bufsize : -1;
-  fs_flushed = false;
-  return ret;
-  /*
-    memcpy(lbaWriteBuff,buffer,bufsize);
+  Serial.print("Writing "); Serial.print(bufsize); Serial.print(" to "); Serial.println(lba);
+  //  if (!mscActive) {
+  //    Serial.print("skipping\n");
+  //    return 0;
+  //  }
+  if (secondCoreSD) {
+    while (lbaToWriteCount || lbaToReadCount);
+    memcpy(lbaWriteBuff, buffer, bufsize);
     int count = bufsize / 512;
-    lbaToWrite = lba;
+    lbaToWrite = lba * sectorLBACount;
     lbaToWritePos = 0;
     lbaToWriteCount = count;
     return bufsize;
-  */
+  } else {
+    return sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512) ? bufsize : -1;
+  }
 }
 
 // Callback invoked when WRITE10 command is completed (status received and accepted by host).
 // used to flush any pending cache.
 void msc_flush_cb(void)
 {
-  fs_flushed = true;
+  Serial.println("flush CB");
+  if (secondCoreSD) {
+    fs_flushed = true;
+  } else {
+    sd.card()->syncDevice();
+    sd.cacheClear();
+  }
 }
 
 // This callback is a C symbol because our Adafruit USB version doesn't expose a function pointer to it
@@ -91,6 +110,7 @@ void msc_flush_cb(void)
 #ifdef __cplusplus
 extern "C" {
 #endif
+extern void displayNoVideosFound();
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
 {
   (void) lun;
@@ -99,6 +119,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
   {
     if (start)
     {
+      mscStart = true;
     }
     else
     {
@@ -112,8 +133,8 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
   {
   (void) lun;
 
-   block_count = sd.card()->sectorCount();
-   block_size  = 512;
+  block_count = sd.card()->sectorCount();
+  block_size  = 512;
   }
 */
 #ifdef __cplusplus
@@ -126,51 +147,100 @@ void USBMSCInit() {
   usb_msc.setUnitReady(false);
   usb_msc.begin();
 }
+void USBMSCReady() {
+  uint32_t block_count = sd.card()->sectorCount();
+  usb_msc.setCapacity(block_count, 512);
+  //usb_msc.setUnitReady(true);
+}
 
 bool lastState = false;
-bool justConnected() {
+
+int count = 0;
+int timer = 0;
+bool ended = false;
+
+
+bool USBJustConnected() {
   if (tud_connected()) {
-    if (lastState == false) {
+    if (lastState == false && ejected == false) {
       lastState = true;
       return true;
     }
   } else {
     lastState = false;
+    ejected = false;
   }
   return false;
 }
 
-extern void displayUSBMSCmessage();
-extern bool powerButtonPressed();
-void USBMSCLoop() {
-  //Set up mass storage and stay in this mode while the user is moving files around
-  if (tud_connected()) {
-    msc_vol = sd.vol();
-    uint32_t block_count = sd.card()->sectorCount();
-    usb_msc.setCapacity(block_count, 512);
-    usb_msc.setUnitReady(true);
-    displayUSBMSCmessage();
-    while (tud_ready() && !ejected && !powerButtonPressed()) {
+void USBMSCStart() {
+  count = 0;
+  timer = millis();
+  mscActive = true;
+  usb_msc.setUnitReady(true);
+}
+bool USBMSCJustStopped() {
+  if (ended) {
+    ended = false;
+    return true;
+  }
+  return false;
+}
+bool handleUSBMSC(bool stopMSC) {
+  if (mscActive) {
+    if (count < 100 && !ejected && !stopMSC) {
+      if ((millis() - timer > 1000) && !tud_ready() ) {
+        count++;
+        delay(1);
+      } else {
+        count = 0;
+      }
       yield();
-      if (lbaToReadCount) {
-        sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, 1);
-        lbaToRead += 1;
-        lbaToReadCount -= 1;
-        lbaToReadPos += 512;
-      }/*
-          if (lbaToWriteCount) {
-            sd.card()->writeSectors(lbaToWrite, (uint8_t*)lbaWriteBuff + lbaToWritePos, 1);
-            lbaToWrite += 1;
-            lbaToWriteCount -= 1;
-            lbaToWritePos += 512;
-          }*/
+      return true;
+    }
+
+
+    for (int i = 0; i < 50; i++) {
+      delay(1);
       yield();
     }
     usb_msc.setUnitReady(false);
-    //delay(100);
-    //TinyUSBDevice.detach();
-    //delay(100);
-    //TinyUSBDevice.attach();
-    //dbgPrint("Media ejected.");
+    for (int i = 0; i < 50; i++) {
+      delay(1);
+      yield();
+    }
+    mscActive = false;
+    //ejected = false;
+    dbgPrint("Media ejected.");
+    sd.card()->syncDevice();
+    sd.cacheClear();
+    ended = true;
+  }
+  return false;
+}
+
+
+void MSCloopCore1() {
+  if (secondCoreSD) {
+    if (lbaToReadCount) {
+      sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, 1);
+      lbaToReadPos += 512;
+      lbaToRead += 1;
+      lbaToReadCount -= 1;
+      //read first block, then remainder
+      if (lbaToReadCount) {
+        sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, lbaToReadCount);
+      }
+      lbaToReadCount = 0;
+    }
+    if (lbaToWriteCount) {
+      sd.card()->writeSectors(lbaToWrite, (uint8_t*)lbaWriteBuff + lbaToWritePos, lbaToWriteCount);
+      lbaToWriteCount = 0;
+    }
+    if (fs_flushed) {
+      sd.card()->syncDevice();
+      sd.cacheClear();
+      fs_flushed = false;
+    }
   }
 }
