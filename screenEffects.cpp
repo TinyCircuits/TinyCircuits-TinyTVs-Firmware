@@ -88,13 +88,19 @@ void StaticEffects::stopEffects(){
 
 
 bool StaticEffects::processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  bool timeToProcess = false;
+  if(millis() - FPSt0 >= effectsTargetFPSPeriod){
+    FPSt0 = millis();
+    timeToProcess = true;
+  }
+
   switch(currentStartedEffect){
     case StaticEffects::CHANGE_CHANNEL:
-      processChangeChannelEffect(screenBuffer, width, height);
+      if(timeToProcess) processChangeChannelEffect(screenBuffer, width, height);
       return true;
     break;
     case StaticEffects::TURN_OFF:
-      processTurnOffEffect(screenBuffer, width, height);
+      if(timeToProcess) processTurnOffEffect(screenBuffer, width, height);
       return true;
     break;
   }

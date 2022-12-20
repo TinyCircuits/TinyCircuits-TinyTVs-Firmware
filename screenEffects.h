@@ -62,6 +62,9 @@ class StaticEffects: public RoundCornerEffect{
 
     uint8_t turnOffRadius = 120;
     uint8_t *turnOffRadiusLimits;
+
+    const uint8_t effectsTargetFPSPeriod = 16;
+    uint32_t FPSt0 = 0;
 };
 
 
