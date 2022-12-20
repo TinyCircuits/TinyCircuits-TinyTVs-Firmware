@@ -53,6 +53,7 @@ void initalizePins() {
   // OLED boost supply pin
   pinMode(9, OUTPUT);
   digitalWrite(9, HIGH);
+  
   pinMode(LEFT_BTN_PIN, INPUT_PULLUP);
   pinMode(RIGHT_BTN_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(LEFT_BTN_PIN), leftButtonPressedInt, FALLING);

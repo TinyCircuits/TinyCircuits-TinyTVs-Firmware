@@ -44,18 +44,18 @@ class StaticEffects: public RoundCornerEffect{
 
     // Process either the 'change channel' or 'turn off' effects
     bool processStartedEffects(uint16_t *screenBuffer, uint8_t width, uint8_t height);
-  private:
+
+    uint8_t currentStartedEffect = StaticEffects::NONE;
+
     enum{
       NONE = 0,
       CHANGE_CHANNEL,
       TURN_OFF,
     };
-
+  private:
     void makeStaticEffectFrame(uint16_t *screenBuffer, uint8_t width, uint8_t height);
     void processChangeChannelEffect(uint16_t *screenBuffer, uint8_t width, uint8_t height);
     void processTurnOffEffect(uint16_t *screenBuffer, const uint8_t width, const uint8_t height);
-
-    uint8_t currentStartedEffect = StaticEffects::NONE;
 
     uint8_t changeChannelFrameIndex = 0;
     uint8_t changeChannelFrameCount = 3;

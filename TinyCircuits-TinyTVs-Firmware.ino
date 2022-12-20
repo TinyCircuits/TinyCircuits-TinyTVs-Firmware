@@ -29,7 +29,7 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#define TinyTVMini 1
+// #define TinyTVMini 1
 
 // Uncomment to compile debug version
 // #define DEBUGAPP (true)
@@ -117,6 +117,16 @@ void loop() {
     setAudioSampleRate(100);
     displayUSBMSCmessage();
     USBMSCStart();
+
+    if(TVscreenOffMode){
+      TVscreenOffMode = false;
+      // Turn backlight on
+      #ifdef TinyTVMini
+      #else
+        digitalWrite(9, LOW);
+        backlightTurnedOff = false;
+      #endif
+    }
   }
   if (handleUSBMSC(powerButtonPressed())) {
     //USBMSC active:
@@ -166,11 +176,20 @@ void loop() {
       //memset(audioBuf, 127, AUDIOBUF_SIZE);
       //memcpy(audioBuf, shutoff, AUDIOBUF_SIZE);
       //sleep_ms(100);//wait to play?
+
+      // Note, the screen backlight gets turned off when the effects stop running (core 2)
       effects.startTurnOffEffect();
       //      digitalWrite(9, HIGH);
       //?digitalWrite(SPK_EN, LOW);
       clearDisplay();
     } else {
+      // Turn backlight on
+      #ifdef TinyTVMini
+      #else
+        digitalWrite(9, LOW);
+        backlightTurnedOff = false;
+      #endif
+
       TVscreenOffMode = false;
       if (doStaticEffects) effects.startChangeChannelEffect();
       playWhiteNoise = false;

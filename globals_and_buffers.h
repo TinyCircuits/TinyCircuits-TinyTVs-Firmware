@@ -64,6 +64,7 @@ uint64_t targetFrameTime;
 
 
 bool paused = false;
+bool backlightTurnedOff = false;
 
 // SETTINGS DEFAULTS
 uint8_t autoplayMode = 1;

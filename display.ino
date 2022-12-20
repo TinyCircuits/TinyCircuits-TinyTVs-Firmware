@@ -169,6 +169,14 @@ void core2Loop(){
     playWhiteNoise = false;
 
     if(TVscreenOffMode){
+      if(!backlightTurnedOff){
+        // Turn backlight off
+        #ifdef TinyTVMini
+        #else
+          digitalWrite(9, HIGH);
+          backlightTurnedOff = true;
+        #endif
+      }
       return;
     }
 
@@ -285,10 +293,17 @@ void  displayNoVideosFound() {
 
 void displayUSBMSCmessage() {
   renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 10, "USB Mode", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  renderer.drawStr(5, 20, "Eject or", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  renderer.drawStr(5, 30, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  renderer.drawStr(5, 40, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+  if(VIDEO_H > 64){
+    renderer.drawStr(85, 45, "USB Mode", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(85, 55, "Eject or", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(85, 65, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(85, 75, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+  }else{
+    renderer.drawStr(5, 10, "USB Mode", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(5, 20, "Eject or", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(5, 30, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+    renderer.drawStr(5, 40, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+  }
   tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
 }
 
