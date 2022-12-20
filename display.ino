@@ -199,8 +199,12 @@ void core2Loop(){
       int h = (_t / 3600000);
       int m = (_t / 60000) % 60;
       int s = (_t / 1000) % 60;
-      sprintf(buf, "%.2i : %.2i : %.2i", h, m, s);
-      renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+      sprintf(buf, "%.2i:%.2i:%.2i", h, m, s);
+      if (VIDEO_H > 64) {
+        renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+      }else{
+        renderer.drawStr(12, VIDEO_H - 10, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+      }
     }
 
     if (showVolumeTimer > 0)
@@ -208,7 +212,11 @@ void core2Loop(){
       char volumeString[] = "|---------|";
       volumeString[1 + (soundVolume * 8) / 255] = '+';
       if (timeStamp) {
-        renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        if (VIDEO_H > 64) {
+          renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        } else {
+          renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 18, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        }
       } else {
         if (VIDEO_H > 64) {
           renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);

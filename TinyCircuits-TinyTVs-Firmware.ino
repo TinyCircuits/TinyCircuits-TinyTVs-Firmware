@@ -29,7 +29,7 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-//#define TinyTVMini 1
+#define TinyTVMini 1
 
 // Uncomment to compile debug version
 // #define DEBUGAPP (true)
@@ -217,7 +217,11 @@ void loop() {
     volUpInput = false;
     if (!TVscreenOffMode) {
       soundVolume += 32;
-      if (soundVolume >= 256) soundVolume = 256;
+      #ifdef TinyTVMini
+        if (soundVolume > 256) soundVolume = 0;
+      #else
+        if (soundVolume >= 256) soundVolume = 256;
+      #endif
       showVolumeTimer = 120;
     }
   }
