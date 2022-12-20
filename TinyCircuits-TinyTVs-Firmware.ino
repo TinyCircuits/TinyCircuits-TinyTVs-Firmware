@@ -189,11 +189,11 @@ void loop() {
       setMute(!isMute());
     }
   }
-  if (channelUpInput) {
+  if (channelUpInput && !streamer.live) {
     channelUpInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects && !streamer.live) effects.startChangeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       if (nextVideo()) {
         nextVideoError = millis();
       } else {
@@ -201,11 +201,11 @@ void loop() {
       }
     }
   }
-  if (channelDownInput) {
+  if (channelDownInput && !streamer.live) {
     channelDownInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects && !streamer.live) effects.startChangeChannelEffect();
+      if (doStaticEffects) effects.startChangeChannelEffect();
       if (prevVideo()) {
         prevVideoError = millis();
       } else {
@@ -213,7 +213,7 @@ void loop() {
       }
     }
   }
-  if (volUpInput) {
+  if (volUpInput && !streamer.live) {
     volUpInput = false;
     if (!TVscreenOffMode) {
       soundVolume += 32;
@@ -225,7 +225,7 @@ void loop() {
       showVolumeTimer = 120;
     }
   }
-  if (volDownInput) {
+  if (volDownInput && !streamer.live) {
     volDownInput = false;
     if (!TVscreenOffMode) {
       soundVolume -= 32;
