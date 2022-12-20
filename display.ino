@@ -193,7 +193,7 @@ void core2Loop(){
 
 
 
-    if (timeStamp && autoplayMode != 2)
+    if (!streamer.live && timeStamp && autoplayMode != 2)
     {
       uint64_t _t = ((millis() - tsMillisInitial));
       int h = (_t / 3600000);
@@ -208,7 +208,7 @@ void core2Loop(){
       char volumeString[] = "|---------|";
       volumeString[1 + (soundVolume * 8) / 255] = '+';
       if (timeStamp) {
-        renderer.drawStr(VIDEO_W - strlen(volumeString) * 5, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
       } else {
         if (VIDEO_H > 64) {
           renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
