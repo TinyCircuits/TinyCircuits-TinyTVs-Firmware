@@ -29,7 +29,7 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-// #define TinyTVMini 1
+#define TinyTVMini 1
 
 // Uncomment to compile debug version
 // #define DEBUGAPP (true)

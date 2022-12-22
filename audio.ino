@@ -38,7 +38,11 @@ void initAudioPin(int pin) {
   gpio_set_function(AUDIO_PIN, GPIO_FUNC_PWM);
   pwm_config config = pwm_get_default_config();
   pwm_config_set_clkdiv_int(&config, 1);// This divider controls the base output PWM frequency
-  pwm_config_set_wrap(&config, 1023);    // 8 bit audio output
+  #ifdef TinyTVMini
+    pwm_config_set_wrap(&config, 255);    // 8 bit audio output (limit otherwise exceeds current draw limit)
+  #else
+    pwm_config_set_wrap(&config, 1023);   // 10 bit audio output
+  #endif
   pwm_init(audioPinPWMSliceNumber, &config, true);
 }
 void setAudioSampleRate(int sr) {
@@ -83,7 +87,11 @@ void addToAudioBuffer(uint8_t * tempBuffer, int len) {
 }
 void pwmInterruptHandler(void) {
   if ((sampleIndex != loadedSampleIndex) || playWhiteNoise) {
-    int sample = (int)(((audioBuf[(sampleIndex)]) * soundVolume) >> 6);
+    #ifdef TinyTVMini
+      int sample = (int)(((audioBuf[(sampleIndex)]) * soundVolume) >> 8);  // 8-bit
+    #else
+      int sample = (int)(((audioBuf[(sampleIndex)]) * soundVolume) >> 6);  // 10-bit
+    #endif
     if (playWhiteNoise) {
       sample += (int)((((rand() & 0xFF) - 128) * soundVolume) >> 12);
     }
