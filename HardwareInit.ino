@@ -1,5 +1,5 @@
 // Pin definitions
-const uint8_t BTN_1 = 11;
+const uint8_t POWER_BUTTON_PIN = 11;
 const uint8_t IR_PIN = 1;
 
 // Pin definitions for SD card
@@ -41,10 +41,9 @@ const int CPU_HZ = F_CPU;
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 
-volatile bool powerButtonWasPressed = false;
-volatile bool leftButtonWasPressed = false;
-volatile bool rightButtonWasPressed = false;
-uint8_t btnState;
+volatile unsigned long powerButtonWasPressed = 0;
+volatile unsigned long leftButtonWasPressed = 0;
+volatile unsigned long rightButtonWasPressed = 0;
 uint64_t lastIRInput = 0; // Helpful for dealing with button signal bounce on this end
 
 
@@ -53,7 +52,7 @@ void initalizePins() {
   // OLED boost supply pin
   pinMode(9, OUTPUT);
   digitalWrite(9, HIGH);
-  
+
   pinMode(LEFT_BTN_PIN, INPUT_PULLUP);
   pinMode(RIGHT_BTN_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(LEFT_BTN_PIN), leftButtonPressedInt, FALLING);
@@ -80,8 +79,8 @@ void initalizePins() {
   digitalWrite(20, LOW);
 
   // Power button
-  pinMode(BTN_1, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BTN_1), powerButtonPressedInt, FALLING);
+  pinMode(POWER_BUTTON_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(POWER_BUTTON_PIN), powerButtonPressedInt, FALLING);
 
   // Enable the speaker and set the PWM pin up for audio
   initAudioPin(AUDIO_PIN);
@@ -138,16 +137,12 @@ void IRInput()
 inline void updateButtonStates()
 {
 
-  if (powerButtonWasPressed) {
-    powerButtonWasPressed = false;
-    powerInput = true;
+  if (millis() - powerButtonWasPressed > 20 && powerButtonWasPressed) {
+    if(digitalRead(POWER_BUTTON_PIN) == LOW){
+      powerButtonWasPressed = 0;
+      powerInput = true;
+    }
   }
-  //  if (digitalRead(BTN_1) == LOW && btnState != LOW)
-  //  {
-  //    powerInput = true;
-  //  }
-
-  btnState = digitalRead(BTN_1);
 
   // Encoder/button input
   if (encoderCW > 0) {
@@ -166,13 +161,17 @@ inline void updateButtonStates()
     encoder2CCW = 0;
     volDownInput = true;
   }
-  if (leftButtonWasPressed) {
-    leftButtonWasPressed = false;
-    volUpInput = true;
+  if (millis() - leftButtonWasPressed > 10 && leftButtonWasPressed) {
+    if(digitalRead(LEFT_BTN_PIN) == LOW){
+      leftButtonWasPressed = 0;
+      volUpInput = true;
+    }
   }
-  if (rightButtonWasPressed) {
-    rightButtonWasPressed = false;
-    channelUpInput = true;
+  if (millis() - rightButtonWasPressed > 10 && rightButtonWasPressed) {
+    if(digitalRead(RIGHT_BTN_PIN) == LOW){
+      rightButtonWasPressed = 0;
+      channelUpInput = true;
+    }
   }
 }
 
@@ -208,20 +207,24 @@ void encoder2PinChange() {
 
 
 void leftButtonPressedInt() {
-  leftButtonWasPressed = true;
+  leftButtonWasPressed = millis();
 }
 
 void rightButtonPressedInt() {
-  rightButtonWasPressed = true;
+  rightButtonWasPressed = millis();
 }
 
+// unsigned int powerButtonPressedTime=0;
 void powerButtonPressedInt() {
-  powerButtonWasPressed = true;
+  // if(millis()-powerButtonPressedTime > 200){
+    // powerButtonPressedTime = millis();
+    powerButtonWasPressed = millis();
+  // }
 }
 
 void clearPowerButtonPressInt() {
-  powerButtonWasPressed = false;
+  powerButtonWasPressed = 0;
 }
 bool powerButtonPressed() {
-  return (digitalRead(BTN_1) == LOW);
+  return (digitalRead(POWER_BUTTON_PIN) == LOW);
 }

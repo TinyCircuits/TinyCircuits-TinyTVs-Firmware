@@ -115,8 +115,9 @@ void setup() {
 void loop() {
   if (USBJustConnected()) {
     setAudioSampleRate(100);
-    displayUSBMSCmessage();
     USBMSCStart();
+    delay(50);
+    displayUSBMSCmessage();
 
     if(TVscreenOffMode){
       TVscreenOffMode = false;
@@ -195,7 +196,6 @@ void loop() {
       playWhiteNoise = false;
       clearAudioBuffer();
       showChannelTimer = 120;
-      paused = false;
 
       //tsMillisInitial += millis() - lowPowerStartTime;
       ////    digitalWrite(9, LOW);

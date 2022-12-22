@@ -61,9 +61,6 @@ uint8_t videoBuf[2][VIDEOBUF_SIZE];
 // PLAYBACK PARAMETERS
 uint64_t targetFrameTime;
 
-
-
-bool paused = false;
 bool backlightTurnedOff = false;
 
 // SETTINGS DEFAULTS

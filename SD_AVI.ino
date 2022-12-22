@@ -234,7 +234,6 @@ int prevVideo() {
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
   channelNumber = currentVideo + 1;
-  paused = false;
   showChannelTimer = 120;
   playWhiteNoise = false;
 
@@ -254,7 +253,6 @@ int nextVideo() {
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
   channelNumber = currentVideo + 1;
-  paused = false;
   showChannelTimer = 120;
   playWhiteNoise = false;
 

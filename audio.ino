@@ -7,7 +7,6 @@
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
 //  Heavily adapted from software originally written by Ben Rose
 //-------------------------------------------------------------------------------
-
 /*
     This file is part of the RP2040TV Player.
     RP2040TV Player is free software: you can redistribute it and/or modify
@@ -20,37 +19,28 @@
     You should have received a copy of the GNU General Public License along with
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
-
 const uint32_t AUDIOBUF_SIZE = 1024 * 8;
 uint8_t audioBuf[AUDIOBUF_SIZE] = {127};
-
 volatile int sampleIndex = 0;
 volatile int loadedSampleIndex = 0;
-
 int audioPinPWMSliceNumber = 0;
 int interruptPWMSliceNumber = 0;
-
-
 volatile bool mute = false;
-
 bool isMute() {
   return mute;
 }
-
 void setMute(bool m) {
   mute = m;
 }
-
 void initAudioPin(int pin) {
   audioPinPWMSliceNumber = pwm_gpio_to_slice_num(pin);
   interruptPWMSliceNumber = audioPinPWMSliceNumber + 1;
   gpio_set_function(AUDIO_PIN, GPIO_FUNC_PWM);
   pwm_config config = pwm_get_default_config();
   pwm_config_set_clkdiv_int(&config, 1);// This divider controls the base output PWM frequency
-  pwm_config_set_wrap(&config, 255);    // 8 bit audio output
+  pwm_config_set_wrap(&config, 1023);    // 8 bit audio output
   pwm_init(audioPinPWMSliceNumber, &config, true);
 }
-
 void setAudioSampleRate(int sr) {
   //generate the interrupt at the audio sample rate to set the PWM duty cycle
   pwm_clear_irq(interruptPWMSliceNumber);
@@ -62,12 +52,10 @@ void setAudioSampleRate(int sr) {
   pwm_config_set_wrap(&configInt, (CPU_HZ / sr) - 1);
   pwm_init(interruptPWMSliceNumber, &configInt, true);
 }
-
 void clearAudioBuffer() {
   sampleIndex = 0;
   loadedSampleIndex = sampleIndex;
 }
-
 int audioSamplesInBuffer() {
   int samples = loadedSampleIndex - sampleIndex;
   if (samples < 0) {
@@ -75,7 +63,6 @@ int audioSamplesInBuffer() {
   }
   return samples;
 }
-
 void addToAudioBuffer(uint8_t * tempBuffer, int len) {
   //Serial.println(audioSamplesInBuffer());
   if (len < AUDIOBUF_SIZE) {
@@ -94,10 +81,9 @@ void addToAudioBuffer(uint8_t * tempBuffer, int len) {
     interrupts();
   }
 }
-
 void pwmInterruptHandler(void) {
   if ((sampleIndex != loadedSampleIndex) || playWhiteNoise) {
-    int sample = (int)(((audioBuf[(sampleIndex)]) * soundVolume) >> 8);
+    int sample = (int)(((audioBuf[(sampleIndex)]) * soundVolume) >> 6);
     if (playWhiteNoise) {
       sample += (int)((((rand() & 0xFF) - 128) * soundVolume) >> 12);
     }
