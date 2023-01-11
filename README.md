@@ -48,3 +48,10 @@ If the library needs updated in the future, make sure to check that the followin
 * `TFT_eSPI.cpp` (adjust line `#include "TFT_eSPI_tinyXXX.h"`)
 * `User_Setup_Select.h` -> `User_Setup_Select__tinytvXXX.h (adjust line `#include <User_Setup_tinytvXXX.h>`)`
 * `User_Setup.h` -> `User_Setup_tinytvXXX.h` (adjust driver, SPI, and resolution depending on TV)
+
+### Changing splash images
+1. https://notisrac.github.io/FileToCArray/
+2. Select the image you want to make a splash of.
+3. 16bit RGB565 output and no PROGMEM. Converter outputs the array in backwards endianness; This is resolved in software.
+4. Convert and then save as file.
+4. Replace splash header with newly converted header in the splashes directory.
