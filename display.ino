@@ -1,20 +1,23 @@
 #include <JPEGDEC.h>                // minor customization
-#include "FileNotFoundSplash.hpp"
-#include "PlaybackErrorSplash.hpp"
-#include "StorageErrorSplash.hpp"
-#include "NoCardSplash.hpp"
-
 
 #ifdef TinyTVMini
 const int VIDEO_X = 0;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 64;
 const int VIDEO_H = 64;
+#include "splashes/FileNotFoundSplash_64x64.c"
+#include "splashes/NoCardSplash_64x64.c"
+#include "splashes/StorageErrorSplash_64x64.c"
+#include "splashes/PlaybackErrorSplash_64x64.c"
 #else
 const int VIDEO_X = 24;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 216;
 const int VIDEO_H = 135;
+#include "splashes/FileNotFoundSplash_216x135.c"
+#include "splashes/NoCardSplash_216x135.c"
+#include "splashes/StorageErrorSplash_216x135.c"
+#include "splashes/PlaybackErrorSplash_216x135.c"
 #endif
 
 // Effects need the framebuffer declared first
@@ -262,22 +265,38 @@ void writeScreenBuffer() {
 
 void  displayPlaybackError(char * filename) {
   dbgPrint("Playback error: " + String(filename));
-  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash, VIDEO_W * VIDEO_H);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_64x64_map, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_216x135_map, VIDEO_W * VIDEO_H);
+  #endif
 }
 
 void  displayCardNotFound() {
   dbgPrint("Card not found!");
-  tft.pushPixelsDMA((uint16_t*)NoCardSplash, VIDEO_W * VIDEO_H);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash_64x64_map, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash_216x145_map, VIDEO_W * VIDEO_H);
+  #endif
 }
 
 void  displayFileSystemError() {
   dbgPrint("Filesystem Error!");
-  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash, VIDEO_W * VIDEO_H);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_64x64_map, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_216x135_map, VIDEO_W * VIDEO_H);
+  #endif
 }
 
 void  displayNoVideosFound() {
   dbgPrint("Filesystem Error!");
-  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash, VIDEO_W * VIDEO_H);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_64x64_map, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_216x135_map, VIDEO_W * VIDEO_H);
+  #endif
   delay(10);
 }
 
