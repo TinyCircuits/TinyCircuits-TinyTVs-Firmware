@@ -1,4 +1,8 @@
 #include <JPEGDEC.h>                // minor customization
+#include "FileNotFoundSplash.hpp"
+#include "PlaybackErrorSplash.hpp"
+#include "StorageErrorSplash.hpp"
+#include "NoCardSplash.hpp"
 
 
 #ifdef TinyTVMini
@@ -258,34 +262,22 @@ void writeScreenBuffer() {
 
 void  displayPlaybackError(char * filename) {
   dbgPrint("Playback error: " + String(filename));
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Playback error:", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  renderer.drawStr(5, 28, filename, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash, VIDEO_W * VIDEO_H);
 }
 
 void  displayCardNotFound() {
   dbgPrint("Card not found!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Card init error!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash, VIDEO_W * VIDEO_H);
 }
 
 void  displayFileSystemError() {
   dbgPrint("Filesystem Error!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Filesystem Error!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash, VIDEO_W * VIDEO_H);
 }
 
 void  displayNoVideosFound() {
   dbgPrint("Filesystem Error!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "No videos found!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash, VIDEO_W * VIDEO_H);
   delay(10);
 }
 
