@@ -1,16 +1,23 @@
 #include <JPEGDEC.h>                // minor customization
 
-
 #ifdef TinyTVMini
 const int VIDEO_X = 0;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 64;
 const int VIDEO_H = 64;
+#include "splashes/FileNotFoundSplash_64x64.h"
+#include "splashes/NoCardSplash_64x64.h"
+#include "splashes/StorageErrorSplash_64x64.h"
+#include "splashes/PlaybackErrorSplash_64x64.h"
 #else
 const int VIDEO_X = 24;
 const int VIDEO_Y = 0;
 const int VIDEO_W = 216;
 const int VIDEO_H = 135;
+#include "splashes/FileNotFoundSplash_216x135.h"
+#include "splashes/NoCardSplash_216x135.h"
+#include "splashes/StorageErrorSplash_216x135.h"
+#include "splashes/PlaybackErrorSplash_216x135.h"
 #endif
 
 // Effects need the framebuffer declared first
@@ -258,34 +265,46 @@ void writeScreenBuffer() {
 
 void  displayPlaybackError(char * filename) {
   dbgPrint("Playback error: " + String(filename));
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Playback error:", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  renderer.drawStr(5, 28, filename, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.setSwapBytes(false);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_64x64, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_216x135, VIDEO_W * VIDEO_H);
+  #endif
+  tft.setSwapBytes(true);
 }
 
 void  displayCardNotFound() {
   dbgPrint("Card not found!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Card init error!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.setSwapBytes(false);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash_64x64, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash_216x145, VIDEO_W * VIDEO_H);
+  #endif
+  tft.setSwapBytes(true);
 }
 
 void  displayFileSystemError() {
   dbgPrint("Filesystem Error!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "Filesystem Error!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.setSwapBytes(false);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_64x64, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_216x135, VIDEO_W * VIDEO_H);
+  #endif
+  tft.setSwapBytes(true);
 }
 
 void  displayNoVideosFound() {
   dbgPrint("Filesystem Error!");
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  renderer.drawStr(5, 16, "No videos found!", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  //renderer.drawStr(5, 28, "Insert media and restart.", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  tft.setSwapBytes(false);
+  #ifdef TinyTVMini
+  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_64x64, VIDEO_W * VIDEO_H);
+  #else
+  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_216x135, VIDEO_W * VIDEO_H);
+  #endif
+  tft.setSwapBytes(true);
   delay(10);
 }
 

@@ -40,7 +40,7 @@
 // This include order matters
 #include <SPI.h>
 #include <TFT_eSPI.h>               // Custom for OLED
-#include <SdFat.h>                  // Custom SdFat for RP2040
+#include <SdFat.h>                  // Custom SdFat for RP2040 
 #include "TinyIRReceiver.hpp"       // Unmodified IR library
 #include <JPEGDEC.h>                // minor customization
 #include "hardware/pwm.h"           // RP2040 API
