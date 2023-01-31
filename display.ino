@@ -280,7 +280,7 @@ void  displayCardNotFound() {
   #ifdef TinyTVMini
   tft.pushPixelsDMA((uint16_t*)NoCardSplash_64x64, VIDEO_W * VIDEO_H);
   #else
-  tft.pushPixelsDMA((uint16_t*)NoCardSplash_216x145, VIDEO_W * VIDEO_H);
+  tft.pushPixelsDMA((uint16_t*)NoCardSplash_216x135, VIDEO_W * VIDEO_H);
   #endif
   tft.setSwapBytes(true);
 }
