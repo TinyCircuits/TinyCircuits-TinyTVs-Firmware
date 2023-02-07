@@ -1,13 +1,26 @@
-// Pin definitions
-const uint8_t POWER_BUTTON_PIN = 11;
+#ifdef TinyTVKit
+
+const uint8_t leftUpButtonPin = TSP_PIN_BT4;
+const uint8_t rightUpButtonPin = TSP_PIN_BT1;
+const uint8_t leftDownButtonPin = TSP_PIN_BT3;
+const uint8_t rightDownButtonPin = TSP_PIN_BT2;
+const uint8_t IR_PIN = 5;
+const uint8_t SD_CS = 10;
+#else
+
 const uint8_t IR_PIN = 1;
+const uint8_t SD_CS = 17;
+#endif
+// Pin definitions
+const uint8_t BTN_1 = 11;
+//const uint8_t IR_PIN = 1;
 
 // Pin definitions for SD card
-const uint8_t SD_CS = 17;
+//const uint8_t SD_CS = 17;
 const uint8_t SD_MISO = 16;
 const uint8_t SD_MOSI = 19;
 const uint8_t SD_SCK = 18;
-const SdSpiConfig SD_CONFIG(SD_CS, DEDICATED_SPI, min(F_CPU / 2, 50000000), &SPI);
+const SdSpiConfig SD_CONFIG(SD_CS, DEDICATED_SPI, min(F_CPU / 4, 50000000), &SPI);
 
 // Pin definitions for audio
 const uint8_t AUDIO_PIN = 22;
@@ -41,18 +54,38 @@ const int CPU_HZ = F_CPU;
 volatile struct TinyIRReceiverCallbackDataStruct sCallbackData;
 
 
-volatile unsigned long powerButtonWasPressed = 0;
-volatile unsigned long leftButtonWasPressed = 0;
-volatile unsigned long rightButtonWasPressed = 0;
+volatile bool powerButtonWasPressed = false;
+volatile bool leftButtonWasPressed = false;
+volatile bool rightButtonWasPressed = false;
+
+volatile bool leftUpButtonWasPressed = false;
+volatile bool rightUpButtonWasPressed = false;
+volatile bool leftDownButtonWasPressed = false;
+volatile bool rightDownButtonWasPressed = false;
+uint8_t btnState;
 uint64_t lastIRInput = 0; // Helpful for dealing with button signal bounce on this end
 
 
 void initalizePins() {
+
+#ifdef TinyTVKit
+  pinMode(leftUpButtonPin, INPUT_PULLUP);
+  pinMode(rightUpButtonPin, INPUT_PULLUP);
+  pinMode(leftDownButtonPin, INPUT_PULLUP);
+  pinMode(rightDownButtonPin, INPUT_PULLUP);
+  attachInterrupt((leftUpButtonPin), leftUpButtonPressedInt, FALLING);
+  attachInterrupt((rightUpButtonPin), rightUpButtonPressedInt, FALLING);
+  attachInterrupt((leftDownButtonPin), leftDownButtonPressedInt, FALLING);
+  attachInterrupt((rightDownButtonPin), rightDownButtonPressedInt, FALLING);
+#else
+  // Speaker enable pin
+  pinMode(23, OUTPUT);
+  pinMode(BTN_1, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(BTN_1), powerButtonPressedInt, FALLING);
 #ifdef TinyTVMini
   // OLED boost supply pin
   pinMode(9, OUTPUT);
   digitalWrite(9, HIGH);
-
   pinMode(LEFT_BTN_PIN, INPUT_PULLUP);
   pinMode(RIGHT_BTN_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(LEFT_BTN_PIN), leftButtonPressedInt, FALLING);
@@ -60,8 +93,6 @@ void initalizePins() {
 #else
 
   // TFT LED pin
-  pinMode(9, OUTPUT);
-  digitalWrite(9, LOW);
 
   pinMode(ENCODER_PINA, INPUT_PULLUP);
   pinMode(ENCODER_PINB, INPUT_PULLUP);
@@ -72,33 +103,28 @@ void initalizePins() {
   attachInterrupt(digitalPinToInterrupt(ENCODER2_PINA), encoder2PinChange, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER2_PINB), encoder2PinChange, CHANGE);
 #endif
-
-
-  // Software shutoff pin
-  pinMode(20, OUTPUT);
-  digitalWrite(20, LOW);
-
-  // Power button
-  pinMode(POWER_BUTTON_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(POWER_BUTTON_PIN), powerButtonPressedInt, FALLING);
+#endif
 
   // Enable the speaker and set the PWM pin up for audio
-  initAudioPin(AUDIO_PIN);
-
-  pinMode(SPK_EN, OUTPUT);
-  digitalWrite(SPK_EN, HIGH);
+   initAudioPin(AUDIO_PIN);
 }
 
 int initializeSDcard() {
   // Set SPI up and make sure the SD card is working
-  SPI.setTX(SD_MOSI); SPI.setRX(SD_MISO);
+#ifndef TinyTVKit
+  SPI.setTX(SD_MOSI);
+  SPI.setRX(SD_MISO);
   SPI.setSCK(SD_SCK);
   SPI.setCS(SD_CS);
   SPI.begin(true);  //check argument?
+#else
+  SPI.begin();
+  //SPI.setClockDivider(4);
+#endif
   return sd.cardBegin(SD_CONFIG);
 }
 
-int initializeFS(){
+int initializeFS() {
   return sd.volumeBegin();
 }
 
@@ -134,16 +160,10 @@ void IRInput()
 
 
 
-inline void updateButtonStates()
+void updateButtonStates()
 {
 
-  if (millis() - powerButtonWasPressed > 20 && powerButtonWasPressed) {
-    if(digitalRead(POWER_BUTTON_PIN) == LOW){
-      powerButtonWasPressed = 0;
-      powerInput = true;
-    }
-  }
-
+  #ifndef TinyTVMini
   // Encoder/button input
   if (encoderCW > 0) {
     encoderCW = 0;
@@ -161,18 +181,39 @@ inline void updateButtonStates()
     encoder2CCW = 0;
     volDownInput = true;
   }
-  if (millis() - leftButtonWasPressed > 10 && leftButtonWasPressed) {
-    if(digitalRead(LEFT_BTN_PIN) == LOW){
-      leftButtonWasPressed = 0;
-      volUpInput = true;
-    }
+  #endif
+  #ifndef TinyTVKit
+  if (leftButtonWasPressed) {
+    leftButtonWasPressed = false;
+    volUpInput = true;
   }
-  if (millis() - rightButtonWasPressed > 10 && rightButtonWasPressed) {
-    if(digitalRead(RIGHT_BTN_PIN) == LOW){
-      rightButtonWasPressed = 0;
-      channelUpInput = true;
-    }
+  if (rightButtonWasPressed) {
+    rightButtonWasPressed = false;
+    channelUpInput = true;
   }
+  if (powerButtonWasPressed) {
+    powerButtonWasPressed = false;
+    powerInput = true;
+  }
+  #else
+  if (leftUpButtonWasPressed) {
+    leftUpButtonWasPressed = false;
+    volUpInput = true;
+  }
+  if (rightUpButtonWasPressed) {
+    rightUpButtonWasPressed = false;
+    channelUpInput = true;
+  }
+  if (leftDownButtonWasPressed) {
+    leftDownButtonWasPressed = false;
+    //powerInput = true;
+    volDownInput = true;
+  }
+  if (rightDownButtonWasPressed) {
+    rightDownButtonWasPressed = false;
+    channelDownInput = true;
+  }
+  #endif
 }
 
 void encoderPinChange() {
@@ -205,26 +246,34 @@ void encoder2PinChange() {
   oldPinB2 = newPinB2;
 }
 
+void leftUpButtonPressedInt(){
+  leftUpButtonWasPressed = true;
+}
+void rightUpButtonPressedInt(){
+  rightUpButtonWasPressed = true;
+}
+void leftDownButtonPressedInt(){
+  leftDownButtonWasPressed = true;
+}
+void rightDownButtonPressedInt(){
+  rightDownButtonWasPressed = true;
+}
 
 void leftButtonPressedInt() {
-  leftButtonWasPressed = millis();
+  leftButtonWasPressed = true;
 }
 
 void rightButtonPressedInt() {
-  rightButtonWasPressed = millis();
+  rightButtonWasPressed = true;
 }
 
-// unsigned int powerButtonPressedTime=0;
 void powerButtonPressedInt() {
-  // if(millis()-powerButtonPressedTime > 200){
-    // powerButtonPressedTime = millis();
-    powerButtonWasPressed = millis();
-  // }
+  powerButtonWasPressed = true;
 }
 
 void clearPowerButtonPressInt() {
-  powerButtonWasPressed = 0;
+  powerButtonWasPressed = false;
 }
 bool powerButtonPressed() {
-  return (digitalRead(POWER_BUTTON_PIN) == LOW);
+  return (digitalRead(BTN_1) == LOW);
 }
