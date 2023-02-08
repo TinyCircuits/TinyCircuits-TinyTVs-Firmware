@@ -26,13 +26,14 @@ const uint16_t colorAndMask4 = 0x7BEF;
 int decodeJPEGIfAvailable() {
   if (!getFilledJPEGBuffer() && !live)
     return 1;
-  JPEGBufferStartDecode();
   streamer.decode(getFilledJPEGBuffer(), getJPEGBufferLength(), JPEGDraw);
   JPEGBufferDecoded();
   return 0;
 }
 
 #ifdef TinyTVKit
+
+// SAMD21 board specific functions
 
 TinyScreen display = TinyScreen(TinyScreenPlus);
 #include "splashes/FileNotFoundSplash_96x64.h"
@@ -145,12 +146,6 @@ int JPEGDraw(JPEGDRAW* block) {
   return 1;
 }
 
-void resetBuffers() {
-  frameReady[0] = false; frameReady[1] = false;
-  frameDecoded[0] = true; frameDecoded[1] = true;
-  dbgPrint("resetBuffers");
-}
-
 void JPEGBufferFilled(int length) {
   decoderDataLength[currentWriteBuf] = length;
   frameDecoded[currentWriteBuf] = false;
@@ -163,12 +158,6 @@ uint8_t * getFilledJPEGBuffer() {
     return videoBuf[/*1 - */currentWriteBuf];
   }
   return NULL;
-}
-
-void JPEGBufferStartDecode() {
-  #ifndef TinyTVKit
-  frameDecoded[currentDecodeBuf] = false;
-  #endif
 }
 
 void JPEGBufferDecoded() {
@@ -214,19 +203,9 @@ void  displayNoVideosFound() {
   display.writeBufferDMA((uint8_t *)FileNotFoundSplash_96x64, VIDEO_W * VIDEO_H * 2);
 }
 
-void displayUSBMSCmessage() {
-  display.setCursor(5, 10);
-  display.print("USB Mode");
-  display.setCursor(5, 20);
-  display.print("Eject or");
-  display.setCursor(5, 30);
-  display.print("disconnect");
-  display.setCursor(5, 40);
-  display.print("to continue");
-  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
-}
-
 #else
+
+// RP2040 board specific functions
 
 #if defined(TinyTVMini)
 TinyScreen display = TinyScreen(RP2040TVMini);
@@ -368,12 +347,6 @@ int JPEGDraw(JPEGDRAW* block) {
   return 1;
 }
 
-void resetBuffers() {
-  frameReady[0] = false; frameReady[1] = false;
-  frameDecoded[0] = true; frameDecoded[1] = true;
-  dbgPrint("resetBuffers");
-}
-
 void JPEGBufferFilled(int length) {
   decoderDataLength[currentWriteBuf] = length;
   frameDecoded[currentWriteBuf] = false;
@@ -387,10 +360,6 @@ uint8_t * getFilledJPEGBuffer() {
     return videoBuf[1 - currentWriteBuf];
   }
   return NULL;
-}
-
-void JPEGBufferStartDecode() {
-
 }
 
 void JPEGBufferDecoded() {
@@ -484,6 +453,8 @@ void displayUSBMSCmessage() {
 
 #endif
 
+// These functions are similar across all platforms
+
 void initializeDisplay() {
   // Initialize TFT
   display.begin();
@@ -510,6 +481,12 @@ void initializeDisplay() {
   digitalWrite(9, LOW);
 #endif
 #endif
+}
+
+void resetBuffers() {
+  frameReady[0] = false; frameReady[1] = false;
+  frameDecoded[0] = true; frameDecoded[1] = true;
+  dbgPrint("resetBuffers");
 }
 
 void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {

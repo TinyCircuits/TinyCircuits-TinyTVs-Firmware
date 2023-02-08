@@ -5,10 +5,6 @@
 #include <stdlib.h>
 #include <TinyScreen.h>
 
-// When 'fillBuffers' and 'decode' are called on separate cores,
-// incoming //Serial data gets stored in buffers and then decoded. Decoded
-// buffers are written to a screen buffer in 'core1Decode' which can
-// immediately be pushed to the screen.
 class JPEGStreamer{
   public:
     JPEGStreamer(JPEGDEC *_jpeg);
