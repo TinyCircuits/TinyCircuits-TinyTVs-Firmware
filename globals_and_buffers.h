@@ -3,6 +3,8 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
+//  
+//  02/08/2023 Cross-platform base committed
 //
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
 //
@@ -100,8 +102,6 @@ uint64_t targetFrameTime;
 volatile int32_t staticTimer = -1;
 uint64_t powerDownTimer = 0;
 volatile int32_t nextVideoTimer = 0;
-
-
 
 bool paused = false;
 
