@@ -32,29 +32,29 @@
 // Select ONE from this list!
 
 //#define TINYTV2_COMPILE
-//#define TINYTV2_MINI_COMPILE
-#define TINYTV_KIT_COMPILE
+#define TINYTV2_MINI_COMPILE
+//#define TINYTV_KIT_COMPILE
 
 #ifdef TINYTV_KIT_COMPILE
-#define TinyTVKit 1
-#define TinyTVMini 1
-#elif defined(TINYTV2_MINI_COMPILE)
-#define TinyTVMini 1
-#endif
 
-#ifdef TinyTVKit
-#define Serial SerialUSB
+  #define TinyTVKit 1
+  #define TinyTVMini 1
+  #define IR_INPUT_PIN 3
+  #define Serial SerialUSB
+
+#elif defined(TINYTV2_MINI_COMPILE)
+
+  #define TinyTVMini 1
+  #define IR_INPUT_PIN 1
+
+#else
+
+  #define IR_INPUT_PIN 1
+
 #endif
 
 // Uncomment to compile debug version
 //#define DEBUGAPP (true)
-
-//TinyIRReceiver library wants this..
-#ifdef TinyTVKit
-#define IR_INPUT_PIN 3
-#else
-#define IR_INPUT_PIN 1
-#endif
 
 // This include order matters
 #include <SPI.h>
@@ -78,8 +78,6 @@ extern TinyScreen display;
 
 void setup() {
   #ifdef DEBUGAPP
-  //Serial.begin(115200);
-  //while (!Serial) {};
   cdc.println("test");
   #endif
   if (!initPCIInterruptForTinyReceiver()) {
@@ -166,9 +164,6 @@ void loop() {
   }
 #endif
 
-  //check for streaming data here?
-
-
   if (showNoVideoError) {
     displayNoVideosFound();
     delay(30);
@@ -191,7 +186,6 @@ void loop() {
 
   // Hardware encoder/button input
   updateButtonStates();
-
 
   // Handle any input flags
   if(powerInput)
@@ -429,7 +423,6 @@ void loop() {
 
   if (t1 > 5000 && !live) {
 
-    //cdc.println(totalTime);
     if (t1 + totalTime > targetFrameTime) {
       dbgPrint(String((uint32_t) (t1 + totalTime) - (uint32_t)targetFrameTime));
       dbgPrint(" ");

@@ -77,15 +77,7 @@ uint16_t frameBuf[VIDEO_W*VIDEO_H];
 #endif
 
 #include "JPEGStreamer.h"
-#ifndef TinyTVKit
-#ifdef TinyTVMini
-  JPEGStreamer streamer(&jpeg, 1);
-#else
-  JPEGStreamer streamer(&jpeg, 0);
-#endif
-#else
-  JPEGStreamer streamer(&jpeg, 2);
-#endif
+JPEGStreamer streamer(&jpeg);
 
 #ifdef TinyTVKit
 const int VIDEOBUF_SIZE = 1024 * 3;

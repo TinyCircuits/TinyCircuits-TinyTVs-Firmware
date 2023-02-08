@@ -3,9 +3,8 @@
 extern const void dbgPrint(const char* s);
 extern const void dbgPrint(const String& s);
 
-JPEGStreamer::JPEGStreamer(JPEGDEC *_jpeg, uint8_t _tinyTVType){
+JPEGStreamer::JPEGStreamer(JPEGDEC *_jpeg){
   jpeg = _jpeg;
-  tinyTVType = _tinyTVType;
 }
 
 extern int IMG_XOFF, IMG_YOFF, IMG_W, IMG_H, HW_VIDEO_W, HW_VIDEO_H;
