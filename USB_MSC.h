@@ -161,8 +161,8 @@ bool USBMSCJustStopped() {
   return false;
 }
 bool handleUSBMSC(bool stopMSC) {
-  if (mscActive && !ejected ) {
-    if (count < 100 && !stopMSC) {
+  if (mscActive) {
+    if (count < 100 && !stopMSC && !ejected) {
       if ((millis() - timer > 1000) && !tud_ready() ) {
         count++;
         delay(1);
@@ -294,7 +294,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
         // If the frame size was determined, get number of bytes to read, check if done filling, then fill if not done
         uint16_t bytesToReadCount = frameSize - (jpegBufferReadCount+1);
 
-        if(bytesToReadCount == 0){
+        if(bytesToReadCount <= 0){
           frameSize = 0;
           frameDeliminatorAcquired = false;
           JPEGBufferFilled(jpegBufferReadCount);
@@ -344,8 +344,6 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
     live = false;
 
     // Wait for decoding to finish and then reset incoming jpeg data read counts (otherwise may start at something other than zero next time)
-    //decoderDataLength[0] = 0;
-    //decoderDataLength[1] = 0;
   }
 
   // No buffer filled, wait for more bytes

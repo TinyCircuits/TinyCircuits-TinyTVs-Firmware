@@ -24,7 +24,6 @@
 */
 
 #ifdef TinyTVKit
-
 const uint8_t leftUpButtonPin = TSP_PIN_BT4;
 const uint8_t rightUpButtonPin = TSP_PIN_BT1;
 const uint8_t leftDownButtonPin = TSP_PIN_BT3;
@@ -32,10 +31,10 @@ const uint8_t rightDownButtonPin = TSP_PIN_BT2;
 const uint8_t IR_PIN = 5;
 const uint8_t SD_CS = 10;
 #else
-
 const uint8_t IR_PIN = 1;
 const uint8_t SD_CS = 17;
 #endif
+
 // Pin definitions
 const uint8_t BTN_1 = 11;
 //const uint8_t IR_PIN = 1;
@@ -231,7 +230,6 @@ void updateButtonStates()
   }
   if (leftDownButtonWasPressed) {
     leftDownButtonWasPressed = false;
-    //powerInput = true;
     volDownInput = true;
   }
   if (rightDownButtonWasPressed) {

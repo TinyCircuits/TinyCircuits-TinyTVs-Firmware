@@ -33,9 +33,9 @@
 
 // Select ONE from this list!
 
-//#define TINYTV2_COMPILE
+#define TINYTV2_COMPILE
 //#define TINYTV2_MINI_COMPILE
-#define TINYTV_KIT_COMPILE
+//#define TINYTV_KIT_COMPILE
 
 #ifdef TINYTV_KIT_COMPILE
 
@@ -49,7 +49,7 @@
   #define TinyTVMini 1
   #define IR_INPUT_PIN 1
 
-#else
+#elif defined(TINYTV2_COMPILE)
 
   #define IR_INPUT_PIN 1
 
@@ -79,9 +79,9 @@ uint64_t TVscreenOffModeStartTime = 0;
 extern TinyScreen display;
 
 void setup() {
-  #ifdef DEBUGAPP
+#ifdef DEBUGAPP
   cdc.println("test");
-  #endif
+#endif
   if (!initPCIInterruptForTinyReceiver()) {
     dbgPrint("No interrupt available for IR_INPUT_PIN");
   }
@@ -102,9 +102,9 @@ void setup() {
     while (1) {
     }
   }
-  #ifndef TinyTVKit
+#ifndef TinyTVKit
   USBMSCReady();
-  #endif
+#endif
   if (!initializeFS()) {
     displayFileSystemError();
     while (1) {
@@ -301,11 +301,11 @@ void loop() {
       soundVolume += 32;
       if (soundVolume >= 256)
       {
-        #ifndef TinyTVMini
+      #ifndef TinyTVMini
         soundVolume = 256;
-        #else
+      #else
         soundVolume &= 0xFF; // Wrap audio around on the mini because we have no vol. down
-        #endif
+      #endif
       }
       showVolumeTimer = 120;
     }
@@ -418,9 +418,9 @@ void loop() {
 
 
   unsigned long t1 = micros();
-  #ifdef TinyTVKit
+#ifdef TinyTVKit
   core2Loop();
-  #endif
+#endif
   t1 = micros() - t1;
 
   if (t1 > 5000 && !live) {
