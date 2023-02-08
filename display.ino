@@ -157,7 +157,8 @@ int JPEGDraw(JPEGDRAW* block) {
       showVolumeTimer--;
     }
   }
-  if ( block->x == 0 && block->y == 0) {
+  if (true) {
+    while(!display.getReadyStatusDMA()) {}
     display.endTransfer();
     display.setX(block->x+IMG_XOFF, block->iWidth - 1+IMG_XOFF);
     //display.setY(block->y, block->y + block->iHeight - 1);
@@ -579,14 +580,14 @@ void tubeOffEffect() {
     int xCircle = pauseRadius / 2;
     int yCircle = 0;
     int radiusError = 1 - xCircle;
-    int radiusLimits[VIDEO_H];
+    uint8_t radiusLimits[VIDEO_H];
     uint16_t staticBuf[VIDEO_W];
     memset(radiusLimits, 0, sizeof(radiusLimits));
     while (xCircle >= yCircle) {
-      radiusLimits[64 + yCircle] = xCircle * 3 / 2;
-      radiusLimits[64 - yCircle] = xCircle * 3 / 2;
-      radiusLimits[64 - xCircle] = yCircle * 3 / 2;
-      radiusLimits[64 + xCircle] = yCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2 + yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2 - yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2 - xCircle] = yCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2 + xCircle] = yCircle * 3 / 2;
       yCircle++;
       if (radiusError < 0)
       {
@@ -668,5 +669,6 @@ void tubeOffEffect() {
       pauseRadius = 0;
     }
   }
-  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
+  waitForScreenDMA();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W-1, VIDEO_H-1);
 }

@@ -33,9 +33,9 @@
 
 // Select ONE from this list!
 
-#define TINYTV2_COMPILE
+//#define TINYTV2_COMPILE
 //#define TINYTV2_MINI_COMPILE
-//#define TINYTV_KIT_COMPILE
+#define TINYTV_KIT_COMPILE
 
 #ifdef TINYTV_KIT_COMPILE
 
@@ -207,12 +207,13 @@ void loop() {
         TVscreenOffModeStartTime = millis();
         delay(30);
         clearAudioBuffer();
-        display.endTransfer();
         while(!display.getReadyStatusDMA()) {}
+        display.endTransfer();
+        display.clearScreen();
         #ifdef TinyTVMini
-        pauseRadius = 8;
+        pauseRadius = 24;
         #else
-        pauseRadius = 120;
+        pauseRadius = 56;
         #endif
         while (pauseRadius > 3) tubeOffEffect();
         #ifndef TinyTVKit
@@ -224,7 +225,6 @@ void loop() {
             display.off();
           #endif
         #else
-        display.endTransfer();
         display.off();
         #endif
       } else {
