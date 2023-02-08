@@ -35,9 +35,6 @@
 //#define TINYTV2_MINI_COMPILE
 //#define TINYTV_KIT_COMPILE
 
-
-
-
 #ifdef TINYTV_KIT_COMPILE
 #define TinyTVKit 1
 #define TinyTVMini 1
@@ -50,7 +47,7 @@
 #endif
 
 // Uncomment to compile debug version
-#define DEBUGAPP (true)
+//#define DEBUGAPP (true)
 
 //TinyIRReceiver library wants this..
 #ifdef TinyTVKit
@@ -185,7 +182,7 @@ void loop() {
   #ifndef TinyTVKit
   if(getFreeJPEGBuffer() && incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE))
   {
-
+    // ???
   }
   else
   {

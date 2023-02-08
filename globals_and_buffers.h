@@ -91,7 +91,7 @@ uint16_t frameBuf[VIDEO_W*VIDEO_H];
 const int VIDEOBUF_SIZE = 1024 * 3;
 const int VIDEOBUF_CNT = 1;
 #else
-const int VIDEOBUF_SIZE = 1024 * 8;
+const int VIDEOBUF_SIZE = 1024 * 20;
 const int VIDEOBUF_CNT = 2;
 #endif
 uint8_t videoBuf[VIDEOBUF_CNT][VIDEOBUF_SIZE];

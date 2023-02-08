@@ -56,10 +56,10 @@ int readNextChunk(uint8_t * dest, int maxLen) {
 
 
   if (chunkLen != chunkRead) {
-    cdc.print("chunkskip ");
-    cdc.print(chunkLen);
-    cdc.print(" ");
-    cdc.println(chunkRead);
+    dbgPrint("chunkskip ");
+    dbgPrint(String(chunkLen));
+    dbgPrint(" ");
+    dbgPrint(String(chunkRead));
     infile.seekCur(chunkLen - chunkRead);
   }
 
@@ -277,11 +277,15 @@ int cmpstr(void const *a, void const *b) {
 }
 
 int loadVideoList() {
+  #ifndef TinyTVKit
   sd.vol()->ls(&cdc);
+  #else
+  sd.vol()->ls(&Serial);  
+  #endif
   infile.close();
   File32 rootDir;
   if (!rootDir.openRoot(sd.vol())) {
-    cdc.println("SD read error?");
+    dbgPrint("SD read error?");
   }
   char fileName[100];
   aviCount = 0;
@@ -295,26 +299,26 @@ int loadVideoList() {
       }
       else
       {
-        cdc.println("Found non-AVI file, skipping");
+        dbgPrint("Found non-AVI file, skipping");
       }
     }
     int e =  rootDir.getError();
     if(e)
     {
-      cdc.println("Directory error "+String(e));
+      dbgPrint("Directory error "+String(e));
       break;
     }
     infile.close();
   }
   int count = aviCount;
   for (int i = 0; i < aviCount; i++) {
-    cdc.println(aviList[i]);
+    dbgPrint(aviList[i]);
   }
 
   if (alphabetizedPlaylist) {
     qsort(aviList, aviCount, sizeof(aviList[0]), cmpstr);
     for (int i = 0; i < aviCount; i++) {
-      cdc.println(aviList[i]);
+      dbgPrint(aviList[i]);
     }
   }
   rootDir.close();

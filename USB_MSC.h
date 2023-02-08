@@ -285,6 +285,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
 
         if(frameSize >= jpegBufferSize){
           frameSize = 0;
+          //jpegBufferReadCount = 0;
           frameDeliminatorAcquired = false;
           cdc.println("ERROR: Received frame size is too big, something went wrong, searching for frame deliminator...");
         }
@@ -312,7 +313,12 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
           cdc.println("ERROR: Tried to place jpeg data out of bounds...");
         }
       }
-
+      if (millis() - liveTimeoutStart >= liveTimeoutLimitms) // Do timeout check if we're waiting for data
+      {
+        frameSize = 0; 
+        frameDeliminatorAcquired = false;
+        live = false;
+      }
       // Buffer not filled yet, wait for more bytes
       return false;
     }else{

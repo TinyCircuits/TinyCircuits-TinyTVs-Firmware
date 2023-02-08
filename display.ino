@@ -72,7 +72,7 @@ void initializeDisplay() {
 
 
   if (screenBuffer.begin()) {
-    cdc.println("malloc error");
+    dbgPrint("malloc error");
   }
   screenBuffer.setFont(thinPixel7_10ptFontInfo);
 }
@@ -187,7 +187,7 @@ int JPEGDraw(JPEGDRAW* block) {
 void resetBuffers() {
   frameReady[0] = false; frameReady[1] = false;
   frameDecoded[0] = true; frameDecoded[1] = true;
-  cdc.println("resetBuffers");
+  dbgPrint("resetBuffers");
 }
 
 uint8_t * getFreeJPEGBuffer() {
@@ -344,7 +344,7 @@ void initializeDisplay() {
 
 
   if (screenBuffer.begin()) {
-    cdc.println("malloc error");
+    dbgPrint("malloc error");
   }
   screenBuffer.setFont(thinPixel7_10ptFontInfo);
 
@@ -487,7 +487,7 @@ int JPEGDraw(JPEGDRAW* block) {
 void resetBuffers() {
   frameReady[0] = false; frameReady[1] = false;
   frameDecoded[0] = true; frameDecoded[1] = true;
-  cdc.println("resetBuffers");
+  dbgPrint("resetBuffers");
 }
 
 uint8_t * getFreeJPEGBuffer() {
