@@ -34,13 +34,11 @@ int decodeJPEGIfAvailable() {
 
 #ifdef TinyTVKit
 
-#ifdef TinyTVKit
 TinyScreen display = TinyScreen(TinyScreenPlus);
 #include "splashes/FileNotFoundSplash_96x64.h"
 #include "splashes/NoCardSplash_96x64.h"
 #include "splashes/StorageErrorSplash_96x64.h"
 #include "splashes/PlaybackErrorSplash_96x64.h"
-#endif
 
 int HW_VIDEO_W = VIDEO_W;
 int HW_VIDEO_H = VIDEO_H;
@@ -54,23 +52,6 @@ int IMG_H = VIDEO_H;
 #include <GraphicsBuffer2.h>
 
 GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, 16, colorDepth16BPP);
-
-void initializeDisplay() {
-  // Initialize TFT
-  display.begin();
-  display.setBitDepth(1);
-  display.setColorMode(TSColorModeRGB);
-  display.setFlip(true);
-  display.clearScreen();
-  display.setFont(thinPixel7_10ptFontInfo);
-  display.initDMA();
-
-
-  if (screenBuffer.begin()) {
-    dbgPrint("malloc error");
-  }
-  screenBuffer.setFont(thinPixel7_10ptFontInfo);
-}
 
 // JPEG callback is a framebuffer blit
 int JPEGDraw(JPEGDRAW* block) {
@@ -273,29 +254,6 @@ int IMG_H = VIDEO_H;
 #include <GraphicsBuffer2.h>
 
 GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, VIDEO_H, colorDepth16BPP);
-
-void initializeDisplay() {
-  // Initialize TFT
-  display.begin();
-  display.setBitDepth(1);
-  display.setColorMode(TSColorModeRGB);
-  display.setFlip(false);
-  display.clearScreen();
-  display.setFont(thinPixel7_10ptFontInfo);
-  display.initDMA();
-
-
-  if (screenBuffer.begin()) {
-    dbgPrint("malloc error");
-  }
-  screenBuffer.setFont(thinPixel7_10ptFontInfo);
-
-#ifdef TinyTVMini
-  digitalWrite(9, HIGH);
-#else
-  digitalWrite(9, LOW);
-#endif
-}
 
 // JPEG callback is a framebuffer blit
 int JPEGDraw(JPEGDRAW* block) {
@@ -525,6 +483,34 @@ void displayUSBMSCmessage() {
 }
 
 #endif
+
+void initializeDisplay() {
+  // Initialize TFT
+  display.begin();
+  display.setBitDepth(1);
+  display.setColorMode(TSColorModeRGB);
+  #ifndef TinyTVKit
+  display.setFlip(false);
+  #else
+  display.setFlip(true);
+  #endif
+  display.clearScreen();
+  display.setFont(thinPixel7_10ptFontInfo);
+  display.initDMA();
+
+
+  if (screenBuffer.begin()) {
+    dbgPrint("malloc error");
+  }
+  screenBuffer.setFont(thinPixel7_10ptFontInfo);
+#ifndef TinyTVKit
+#ifdef TinyTVMini
+  digitalWrite(9, HIGH);
+#else
+  digitalWrite(9, LOW);
+#endif
+#endif
+}
 
 void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
   display.endTransfer();
