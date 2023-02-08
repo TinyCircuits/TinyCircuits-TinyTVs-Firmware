@@ -55,11 +55,6 @@ int IMG_H = VIDEO_H;
 
 GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, 16, colorDepth16BPP);
 
-void JPEGDecWaitFunc()
-{
-  while(!display.getReadyStatusDMA()){}
-}
-
 void initializeDisplay() {
   // Initialize TFT
   display.begin();
@@ -75,21 +70,6 @@ void initializeDisplay() {
     dbgPrint("malloc error");
   }
   screenBuffer.setFont(thinPixel7_10ptFontInfo);
-}
-
-void waitForScreenDMA() {
-  while(!display.getReadyStatusDMA()) {}  
-}
-
-void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  display.endTransfer();
-  display.setX(x, x+w);
-  display.setY(y, y+h);
-  display.startData();
-}
-
-void writeToScreenDMA(uint16_t * bufToWrite, uint16_t count) {
-  display.writeBufferDMA((uint8_t *)bufToWrite, count * 2);
 }
 
 // JPEG callback is a framebuffer blit
@@ -190,17 +170,6 @@ void resetBuffers() {
   dbgPrint("resetBuffers");
 }
 
-uint8_t * getFreeJPEGBuffer() {
-  if (millis() - lastBufferAssignment > 250) {
-    resetBuffers();
-  }
-  if (frameDecoded[currentWriteBuf] == true && frameReady[currentWriteBuf] == false) {
-    lastBufferAssignment = millis();
-    return videoBuf[currentWriteBuf];
-  }
-  return NULL;
-}
-
 void JPEGBufferFilled(int length) {
   decoderDataLength[currentWriteBuf] = length;
   frameDecoded[currentWriteBuf] = false;
@@ -215,10 +184,6 @@ uint8_t * getFilledJPEGBuffer() {
   return NULL;
 }
 
-int getJPEGBufferLength() {
-  return decoderDataLength[currentDecodeBuf];
-}
-
 void JPEGBufferStartDecode() {
   #ifndef TinyTVKit
   frameDecoded[currentDecodeBuf] = false;
@@ -230,24 +195,6 @@ void JPEGBufferDecoded() {
   decoderDataLength[currentDecodeBuf] = 0;
   frameReady[currentDecodeBuf] = false;
   frameDecoded[currentDecodeBuf] = true;
-}
-
-void core2Loop()
-{
-  if (TVscreenOffMode) {
-    return;
-  } 
-  if (decodeJPEGIfAvailable()) {
-    return;
-  }
-
-  return;
-}
-
-void writeScreenBuffer() {
-  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
-  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
-  waitForScreenDMA();
 }
 
 void  displayPlaybackError(char * filename) {
@@ -327,11 +274,6 @@ int IMG_H = VIDEO_H;
 
 GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, VIDEO_H, colorDepth16BPP);
 
-void JPEGDecWaitFunc()
-{
-  while(!display.getReadyStatusDMA()){}
-}
-
 void initializeDisplay() {
   // Initialize TFT
   display.begin();
@@ -353,22 +295,6 @@ void initializeDisplay() {
 #else
   digitalWrite(9, LOW);
 #endif
-}
-
-void waitForScreenDMA() {
-  //waitForScreenDMA();
-  while(!display.getReadyStatusDMA()) {}  
-}
-
-void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
-  display.endTransfer();
-  display.setX(x, x+w);
-  display.setY(y, y+h);
-  display.startData();
-}
-
-void writeToScreenDMA(uint16_t * bufToWrite, uint16_t count) {
-  display.writeBufferDMA((uint8_t *)bufToWrite, count * 2);
 }
 
 // JPEG callback is a framebuffer blit
@@ -490,17 +416,6 @@ void resetBuffers() {
   dbgPrint("resetBuffers");
 }
 
-uint8_t * getFreeJPEGBuffer() {
-  if (millis() - lastBufferAssignment > 250) {
-    resetBuffers();
-  }
-  if (frameDecoded[currentWriteBuf] == true && frameReady[currentWriteBuf] == false) {
-    lastBufferAssignment = millis();
-    return videoBuf[currentWriteBuf];
-  }
-  return NULL;
-}
-
 void JPEGBufferFilled(int length) {
   decoderDataLength[currentWriteBuf] = length;
   frameDecoded[currentWriteBuf] = false;
@@ -514,10 +429,6 @@ uint8_t * getFilledJPEGBuffer() {
     return videoBuf[1 - currentWriteBuf];
   }
   return NULL;
-}
-
-int getJPEGBufferLength() {
-  return decoderDataLength[currentDecodeBuf];
 }
 
 void JPEGBufferStartDecode() {
@@ -536,99 +447,6 @@ void JPEGBufferDecoded() {
   decoderDataLength[currentDecodeBuf] = 0;
   frameReady[currentDecodeBuf] = false;
   frameDecoded[currentDecodeBuf] = true;
-}
-
-void core2Loop()
-{
-  if (TVscreenOffMode) {
-    return;
-  } 
-  if (decodeJPEGIfAvailable()) {
-    return;
-  }
-
-  return;
-  char buf[48];
-  // Render stylizations
-  if (showChannelNumber) {
-    if ( showChannelTimer ) {
-      sprintf(buf, "CH%.2i", channelNumber);
-      if (VIDEO_H > 64) {
-        //renderer.drawStr( VIDEO_W - 50, 10, buf, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-      } else {
-        //renderer.drawStr(VIDEO_W - 25, 5, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-      }
-      showChannelTimer--;
-    }
-  }
-
-  if (timeStamp && autoplayMode != 2)
-  {
-    uint64_t _t = ((millis() - tsMillisInitial));
-    int h = (_t / 3600000);
-    int m = (_t / 60000) % 60;
-    int s = (_t / 1000) % 60;
-    sprintf(buf, "%.2i : %.2i : %.2i", h, m, s);
-    //renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    display.setFont(thinPixel7_10ptFontInfo);
-    display.setCursor(16, VIDEO_H-20);
-    while(!display.getReadyStatusDMA()){} 
-    display.print(buf);
-  }
-
-  if (showVolumeTimer > 0)
-  {
-    char volumeString[] = "|---------|";
-    volumeString[1 + (soundVolume * 8) / 255] = '+';
-    if (timeStamp) {
-      //renderer.drawStr(VIDEO_W - strlen(volumeString) * 5, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-      display.setFont(liberationSansNarrow_14ptFontInfo);
-      display.setCursor(VIDEO_W - strlen(volumeString) * 5, VIDEO_H-20);
-      while(!display.getReadyStatusDMA()){} 
-      display.print(volumeString);
-    } else {
-      if (VIDEO_H > 64) {
-        //renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-        display.setFont(liberationSansNarrow_14ptFontInfo);
-        display.setCursor((VIDEO_W / 2) - 20, VIDEO_H-25);
-        while(!display.getReadyStatusDMA()){} 
-        display.print(volumeString);
-      } else {
-        //renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-        display.setFont(thinPixel7_10ptFontInfo);
-        display.setCursor((VIDEO_W / 2) - 28, VIDEO_H-15);
-        while(!display.getReadyStatusDMA()){} 
-        display.print(volumeString);
-      }
-    }
-    showVolumeTimer--;
-  }
-  if(nextVideoTimer > 0)
-  {
-    nextVideoTimer--;
-    if(nextVideoTimer == 0) channelUpInput = true;
-  }
-  else if(nextVideoTimer < 0)
-  {
-    nextVideoTimer++;
-    if(nextVideoTimer == 0) channelDownInput = true;
-  }
-  if(powerDownTimer > 0)
-  {
-    powerDownTimer--;
-    if(powerDownTimer == 0) powerInput = true;
-  }
-  if(staticTimer > 0) staticTimer--;
-  //writeScreenBuffer();
-
-}
-
-
-
-void writeScreenBuffer() {
-  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
-  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
-  waitForScreenDMA();
 }
 
 void  displayPlaybackError(char * filename) {
@@ -707,6 +525,54 @@ void displayUSBMSCmessage() {
 }
 
 #endif
+
+void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  display.endTransfer();
+  display.setX(x, x+w);
+  display.setY(y, y+h);
+  display.startData();
+}
+
+int getJPEGBufferLength() {
+  return decoderDataLength[currentDecodeBuf];
+}
+
+uint8_t * getFreeJPEGBuffer() {
+  if (millis() - lastBufferAssignment > 250) {
+    resetBuffers();
+  }
+  if (frameDecoded[currentWriteBuf] == true && frameReady[currentWriteBuf] == false) {
+    lastBufferAssignment = millis();
+    return videoBuf[currentWriteBuf];
+  }
+  return NULL;
+}
+
+void core2Loop()
+{
+  if (TVscreenOffMode) {
+    return;
+  } 
+  if (decodeJPEGIfAvailable()) {
+    return;
+  }
+
+  return;
+}
+
+void writeToScreenDMA(uint16_t * bufToWrite, uint16_t count) {
+  display.writeBufferDMA((uint8_t *)bufToWrite, count * 2);
+}
+
+void waitForScreenDMA() {
+  while(!display.getReadyStatusDMA()) {}  
+}
+
+void writeScreenBuffer() {
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
+  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
+  waitForScreenDMA();
+}
 
 void clearDisplay() {
   waitForScreenDMA();
