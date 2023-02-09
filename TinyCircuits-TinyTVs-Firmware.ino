@@ -255,13 +255,13 @@ void loop() {
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
       if (doStaticEffects) changeChannelEffect();
-      nextVideoTimer = (1000000/targetFrameTime) / 6;
+      //nextVideoTimer = (1000000/targetFrameTime) / 6;
       //#endif
-      //if (nextVideo()) {
-      //  nextVideoError = millis();
-      //} else {
-      //  nextVideoError = 0;
-      //}
+      if (nextVideo()) {
+        nextVideoError = millis();
+      } else {
+        nextVideoError = 0;
+      }
     }
   }
   if (channelDownInput && !live) {
@@ -278,6 +278,7 @@ void loop() {
       }
     }
   }
+  /*
   if(nextVideoTimer < 0)
   {
     nextVideoTimer++;
@@ -294,6 +295,7 @@ void loop() {
       }
     }
   }
+  */
   if (volUpInput && !live) {
     volUpInput = false;
     if (!TVscreenOffMode) {
@@ -339,8 +341,6 @@ void loop() {
     settingsNeedSaved = false;
     dbgPrint("Saved settings file");
   }
-
-
 
   if (nextVideoError) {
     if ( millis() - nextVideoError < 3000) {

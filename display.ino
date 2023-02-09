@@ -584,10 +584,10 @@ void tubeOffEffect() {
     uint16_t staticBuf[VIDEO_W];
     memset(radiusLimits, 0, sizeof(radiusLimits));
     while (xCircle >= yCircle) {
-      radiusLimits[VIDEO_H/2 + yCircle] = xCircle * 3 / 2;
-      radiusLimits[VIDEO_H/2 - yCircle] = xCircle * 3 / 2;
-      radiusLimits[VIDEO_H/2 - xCircle] = yCircle * 3 / 2;
-      radiusLimits[VIDEO_H/2 + xCircle] = yCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 + yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 - yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 - xCircle] = yCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 + xCircle] = yCircle * 3 / 2;
       yCircle++;
       if (radiusError < 0)
       {
