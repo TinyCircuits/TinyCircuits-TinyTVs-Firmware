@@ -255,7 +255,7 @@ uint8_t commandCheck(uint8_t *jpegBuffer){
 
 
 void commandSearch(uint8_t *jpegBuffer){
-  while(true){
+  while(cdc.available()){
     // Move all bytes from right (highest index) to left (lowest index) in buffer
     jpegBuffer[0] = jpegBuffer[1];
     jpegBuffer[1] = jpegBuffer[2];
@@ -324,18 +324,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
       return false;
     }else{
       // Search for deliminator to get back to filling buffers or respond to commands
-      //commandSearch(jpegBuffer);
-      while(cdc.available() && commandCheck(jpegBuffer) != FRAME_DELIMINATOR){
-        // Move all bytes from right (highest index) to left (lowest index) in buffer
-        jpegBuffer[0] = jpegBuffer[1];
-        jpegBuffer[1] = jpegBuffer[2];
-        jpegBuffer[2] = jpegBuffer[3];
-        jpegBuffer[3] = jpegBuffer[4];
-        jpegBuffer[4] = jpegBuffer[5];
-        jpegBuffer[5] = jpegBuffer[6];
-        jpegBuffer[6] = jpegBuffer[7];
-        jpegBuffer[7] = cdc.read();
-      }
+      commandSearch(jpegBuffer);
     }
   }else if(millis() - liveTimeoutStart >= liveTimeoutLimitms){
     // A timeout is a time to reset states of both jpeg buffers, reset everything
