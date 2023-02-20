@@ -31,10 +31,16 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>  .
 */
 
+// Version sceme: major.minor.patch
+#define VERSION_MAJOR 1 // (incremented when the release contains breaking changes, all other numbers are set to 0)
+#define VERSION_MINOR 0 // (incremented when the release contains new non-breaking features, patch is set to 0)
+#define VERSION_PATCH 0 // (incremented when the release only contains bugfixes and very minor/trivial features considered necessary)
+
+
 // Select ONE from this list!
 
-#define TINYTV2_COMPILE
-//#define TINYTV2_MINI_COMPILE
+#define TINYTV_2_COMPILE
+//#define TINYTV_MINI_COMPILE
 //#define TINYTV_KIT_COMPILE
 
 #ifdef TINYTV_KIT_COMPILE
@@ -44,12 +50,12 @@
   #define IR_INPUT_PIN 3
   #define Serial SerialUSB
 
-#elif defined(TINYTV2_MINI_COMPILE)
+#elif defined(TINYTV_MINI_COMPILE)
 
   #define TinyTVMini 1
   #define IR_INPUT_PIN 1
 
-#elif defined(TINYTV2_COMPILE)
+#elif defined(TINYTV_2_COMPILE)
 
   #define IR_INPUT_PIN 1
 
@@ -69,6 +75,7 @@
 #include "globals_and_buffers.h"    // Big fat statically-allocate-everything header
 #ifndef TinyTVKit
 #include "hardware/pwm.h"           // RP2040 API
+#include "pico/stdlib.h"            // RP2040 set_sys_clock_khz
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
 #endif
 
