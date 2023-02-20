@@ -3,14 +3,14 @@
 This repository contains the firmware source for JPEG AVI playback (and serial JPEG streaming for TinyTV 2 and Mini) on the following TinyCircuits platforms:
 * TinyTV 2
 * TinyTV Mini
-* TinyTV DIY (also has a separate repo for TinyCircuits raw `.tsv` video playback)
+* TinyTV DIY (also has a separate repo for legacy TinyCircuits raw `.tsv` video playback)
 
 See the TinyTV-Site repo for even more information and utility pages for streaming, updating, and changing settings: https://github.com/TinyCircuits/TinyTV-site
 
 ## Versions/Changing the code
 
 Two steps **need** to be done to release a new version of the firmware:
-1. In `TinyCircuits-TinyTVs-Firmware.ino` update the firmware version (format `major.minor.patch`) in the following defines 
+1. In `TinyCircuits-TinyTVs-Firmware.ino` update the firmware version (format `major.minor.patch`) in the following defines:
     * `#define VERSION_MAJOR` (incremented when the release contains breaking changes, all other numbers are set to 0)
     * `#define VERSION_MINOR` (incremented when the release contains new non-breaking features, patch is set to 0)
     * `#define VERSION_PATCH` (incremented when the release only contains bugfixes and very minor/trivial features considered necessary)
