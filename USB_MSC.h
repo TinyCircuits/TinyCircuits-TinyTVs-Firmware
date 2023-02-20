@@ -244,10 +244,13 @@ uint8_t commandCheck(uint8_t *jpegBuffer){
       cdc.write("TV2");
     #elif !defined(TinyTVKit)
       cdc.write("TVMINI");
-    #else
-      cdc.write("TVROUND");
     #endif
     return TINYTV_TYPE;
+  }else if(jpegBuffer[5] == 'V' && jpegBuffer[6] == 'E' && jpegBuffer[7] == 'R'){
+    // Allow for major.minor.patch up to [XXX.XXX.XXX]
+    char version[12];
+    sprintf(version, "[%u.%u.%u]", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+    cdc.write(version);
   }
 
   return NONE;
