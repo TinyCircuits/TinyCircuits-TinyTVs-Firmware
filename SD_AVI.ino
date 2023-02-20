@@ -3,6 +3,8 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
+//  
+//  02/08/2023 Cross-platform base committed
 //
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
 //
@@ -28,10 +30,7 @@
 //    ffmpeg -i "videofile.mp4" -r 24 -vf "scale=216:135,hqdn3d" -b:v 1500k -maxrate 1500k -bufsize 64k -c:v mjpeg -acodec pcm_u8 -ar 10000 -ac 1 in.avi
 
 
-const int SEEKBUF_LEN = 4096;
-char seekBuf[SEEKBUF_LEN];
-
-char aviList[50][50] = {"\0"};
+char aviList[10][20] = {"\0"};
 int aviCount = 0;
 uint32_t livePos;
 uint8_t nextChunkTag[8];
@@ -39,12 +38,12 @@ bool videoStreamReady = false;
 
 void saveSettings()
 {
-  uint8_t tempBuff[500];
-  File32 settingsFile;
-  settingsFile.open("settings.txt", O_WRITE | O_CREAT);
-  sprintf((char*)tempBuff, "Volume: %hi\n\rStatic vfx/sfx: %hhi\n\rPlayback mode: %hhi\n\rShow timestamp: %hhi\n\rDisplay channel #: %hhi\n\rAlphabetize playback: %hhi", soundVolume, doStaticEffects, autoplayMode, timeStamp, showChannelNumber, alphabetizedPlaylist);
-  settingsFile.write((const char*)tempBuff);
-  settingsFile.close();
+//  uint8_t tempBuff[500];
+//  File32 settingsFile;
+//  settingsFile.open("settings.txt", O_WRITE | O_CREAT);
+//  sprintf((char*)tempBuff, "Volume: %hi\n\rStatic vfx/sfx: %hhi\n\rPlayback mode: %hhi\n\rShow timestamp: %hhi\n\rDisplay channel #: %hhi\n\rAlphabetize playback: %hhi", soundVolume, doStaticEffects, autoplayMode, timeStamp, showChannelNumber, alphabetizedPlaylist);
+//  settingsFile.write((const char*)tempBuff);
+//  settingsFile.close();
 }
 
 uint32_t getInt(uint8_t * intOffset) {
@@ -52,25 +51,19 @@ uint32_t getInt(uint8_t * intOffset) {
 }
 
 int readNextChunk(uint8_t * dest, int maxLen) {
-  //  int chunkLen = nextChunkLength();
-  //  if ((chunkLen & 1) != 0) { //padding
-  //    chunkLen+=1;
-  //  }
-  //  if (infile.read(dest, min(chunkLen + 8, maxLen)) == (chunkLen + 8)) {
-  //    memcpy(nextChunkTag, dest + nextChunkLength(), 8);
-  //    return 0;
-  //  }
-  //  return 1;
 
   int chunkLen = nextChunkLength();
-  int chunkRead = infile.read(dest, min(chunkLen, maxLen));
+  int chunkRead = 0;
+  chunkRead = infile.read(dest, min(chunkLen, maxLen));
 
 
   if (chunkLen != chunkRead) {
-    cdc.println("chunkskip ?" );
+    dbgPrint("chunkskip ");
+    dbgPrint(String(chunkLen));
+    dbgPrint(" ");
+    dbgPrint(String(chunkRead));
     infile.seekCur(chunkLen - chunkRead);
   }
-
 
   if ((chunkLen & 1) != 0) { //padding
     infile.seekCur(1);
@@ -234,6 +227,7 @@ int prevVideo() {
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
   channelNumber = currentVideo + 1;
+  paused = false;
   showChannelTimer = 120;
   playWhiteNoise = false;
 
@@ -253,6 +247,7 @@ int nextVideo() {
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
   channelNumber = currentVideo + 1;
+  paused = false;
   showChannelTimer = 120;
   playWhiteNoise = false;
 
@@ -284,14 +279,19 @@ int cmpstr(void const *a, void const *b) {
 }
 
 int loadVideoList() {
+  #ifndef TinyTVKit
+  sd.vol()->ls(&cdc);
+  #else
+  sd.vol()->ls(&Serial);  
+  #endif
   infile.close();
-  if (!dir.open("/", O_RDONLY)) {
-    cdc.println("SD read error?");
+  File32 rootDir;
+  if (!rootDir.openRoot(sd.vol())) {
+    dbgPrint("SD read error?");
   }
-  dir.rewind();
   char fileName[100];
   aviCount = 0;
-  while (infile.openNext(&dir, O_RDONLY)) {
+  while (infile.openNext(&rootDir, O_RDONLY)) {
     memset(fileName, 0, 100);
     infile.getName(fileName, 100);
     if (fileName[0] != '.') {
@@ -299,20 +299,30 @@ int loadVideoList() {
         strcpy(aviList[aviCount], fileName);
         aviCount++;
       }
+      else
+      {
+        dbgPrint("Found non-AVI file, skipping");
+      }
+    }
+    int e =  rootDir.getError();
+    if(e)
+    {
+      dbgPrint("Directory error "+String(e));
+      break;
     }
     infile.close();
   }
   int count = aviCount;
   for (int i = 0; i < aviCount; i++) {
-    cdc.println(aviList[i]);
+    dbgPrint(aviList[i]);
   }
 
   if (alphabetizedPlaylist) {
     qsort(aviList, aviCount, sizeof(aviList[0]), cmpstr);
     for (int i = 0; i < aviCount; i++) {
-      cdc.println(aviList[i]);
+      dbgPrint(aviList[i]);
     }
   }
-  dir.close();
+  rootDir.close();
   return count;
 }

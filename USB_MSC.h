@@ -3,6 +3,8 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
+//  
+//  02/08/2023 Cross-platform base committed
 //
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
 //
@@ -39,22 +41,9 @@ uint32_t sectorLBACount = 1;
 
 const bool secondCoreSD = false;
 
-//void _sdWait()
-//{
-//  while (sd.card()->isBusy()) {
-//    delay(1);
-//  }
-//  return;
-//}
-
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-  cdc.print("Reading "); cdc.print(bufsize); cdc.print(" from "); cdc.println(lba);
-  //  if (!mscActive) {
-  //    cdc.print("skipping\n");
-  //    return 0;
-  //  }
-  if (secondCoreSD) {
+  if (secondCoreSD && !ejected ) {
     while (lbaToWriteCount || lbaToReadCount);
     volatile int count = bufsize / 512;
     lbaToRead = lba * sectorLBACount;
@@ -62,9 +51,10 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
     lbaToReadCount = count;
     while (lbaToReadCount == count) {};
     return bufsize;
-  } else {
+  } else if(!ejected) {
     return sd.card()->readSectors(lba * sectorLBACount, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
   }
+  return 0;
 }
 
 // Callback invoked when received WRITE10 command.
@@ -72,12 +62,7 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
-  cdc.print("Writing "); cdc.print(bufsize); cdc.print(" to "); cdc.println(lba);
-  //  if (!mscActive) {
-  //    cdc.print("skipping\n");
-  //    return 0;
-  //  }
-  if (secondCoreSD) {
+  if (secondCoreSD && !ejected ) {
     while (lbaToWriteCount || lbaToReadCount);
     memcpy(lbaWriteBuff, buffer, bufsize);
     int count = bufsize / 512;
@@ -85,19 +70,19 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
     lbaToWritePos = 0;
     lbaToWriteCount = count;
     return bufsize;
-  } else {
+  } else if(!ejected) {
     return sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512) ? bufsize : -1;
   }
+  return 0;
 }
 
 // Callback invoked when WRITE10 command is completed (status received and accepted by host).
 // used to flush any pending cache.
 void msc_flush_cb(void)
 {
-  cdc.println("flush CB");
-  if (secondCoreSD) {
+  if (secondCoreSD && !ejected ) {
     fs_flushed = true;
-  } else {
+  } else if(!ejected) {
     sd.card()->syncDevice();
     sd.cacheClear();
   }
@@ -126,15 +111,6 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
   }
   return true;
 }
-/*
-  void tud_msc_capacity_cb(uint8_t lun, uint32_t* block_count, uint16_t* block_size)
-  {
-  (void) lun;
-
-  block_count = sd.card()->sectorCount();
-  block_size  = 512;
-  }
-*/
 #ifdef __cplusplus
 }
 #endif
@@ -148,7 +124,6 @@ void USBMSCInit() {
 void USBMSCReady() {
   uint32_t block_count = sd.card()->sectorCount();
   usb_msc.setCapacity(block_count, 512);
-  //usb_msc.setUnitReady(true);
 }
 
 bool lastState = false;
@@ -175,6 +150,7 @@ void USBMSCStart() {
   count = 0;
   timer = millis();
   mscActive = true;
+  usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
   usb_msc.setUnitReady(true);
 }
 bool USBMSCJustStopped() {
@@ -186,7 +162,7 @@ bool USBMSCJustStopped() {
 }
 bool handleUSBMSC(bool stopMSC) {
   if (mscActive) {
-    if (count < 100 && !ejected && !stopMSC) {
+    if (count < 100 && !stopMSC && !ejected) {
       if ((millis() - timer > 1000) && !tud_ready() ) {
         count++;
         delay(1);
@@ -208,10 +184,11 @@ bool handleUSBMSC(bool stopMSC) {
       yield();
     }
     mscActive = false;
-    //ejected = false;
     dbgPrint("Media ejected.");
     sd.card()->syncDevice();
     sd.cacheClear();
+    while(sd.card()->isBusy()) {}
+    usb_msc.setReadWriteCallback(nullptr, nullptr, nullptr);
     ended = true;
   }
   return false;
@@ -219,7 +196,7 @@ bool handleUSBMSC(bool stopMSC) {
 
 
 void MSCloopCore1() {
-  if (secondCoreSD) {
+  if (secondCoreSD && !ejected ) {
     if (lbaToReadCount) {
       sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, 1);
       lbaToReadPos += 512;
@@ -237,8 +214,128 @@ void MSCloopCore1() {
     }
     if (fs_flushed) {
       sd.card()->syncDevice();
-      sd.cacheClear();
+      //sd.cacheClear();
+      while(sd.card()->isBusy()) {}
       fs_flushed = false;
     }
   }
 }
+
+static uint16_t readCount;
+uint32_t frameSize = 0;
+bool frameDeliminatorAcquired = false;
+uint32_t liveTimeoutStart = 0;
+uint16_t liveTimeoutLimitms = 750;
+
+enum COMMAND_TYPE{
+    NONE,
+    FRAME_DELIMINATOR,
+    TINYTV_TYPE
+};
+
+uint8_t commandCheck(uint8_t *jpegBuffer){
+  // "0x30 0x30 0x64 0x63" is the start of an avi frame
+  if(jpegBuffer[0] == 0x30 && jpegBuffer[1] == 0x30 && jpegBuffer[2] == 0x64 && jpegBuffer[3] == 0x63){
+    frameDeliminatorAcquired = true;
+    return FRAME_DELIMINATOR;
+    
+  }else if(jpegBuffer[4] == 'T' && jpegBuffer[5] == 'Y' && jpegBuffer[6] == 'P' && jpegBuffer[7] == 'E'){
+    #if !defined(TinyTVKit) && !defined(TinyTVMini)
+      cdc.write("TV2");
+    #elif !defined(TinyTVKit)
+      cdc.write("TVMINI");
+    #else
+      cdc.write("TVROUND");
+    #endif
+    return TINYTV_TYPE;
+  }
+
+  return NONE;
+}
+
+
+void commandSearch(uint8_t *jpegBuffer){
+  while(cdc.available()){
+    // Move all bytes from right (highest index) to left (lowest index) in buffer
+    jpegBuffer[0] = jpegBuffer[1];
+    jpegBuffer[1] = jpegBuffer[2];
+    jpegBuffer[2] = jpegBuffer[3];
+    jpegBuffer[3] = jpegBuffer[4];
+    jpegBuffer[4] = jpegBuffer[5];
+    jpegBuffer[5] = jpegBuffer[6];
+    jpegBuffer[6] = jpegBuffer[7];
+    jpegBuffer[7] = cdc.read();
+
+    if(commandCheck(jpegBuffer) == FRAME_DELIMINATOR){
+      break;
+    }
+  }
+}
+
+void JPEGBufferFilled(int);
+
+bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint16_t &jpegBufferReadCount = readCount){
+  if(cdc.available() > 0){
+    liveTimeoutStart = millis();
+
+    if(frameDeliminatorAcquired){
+      live = true;
+      //return fillBuffer(jpegBuffer, jpegBufferSize, jpegBufferReadCount);
+      if(frameSize == 0){
+        frameSize = (((uint16_t)jpegBuffer[7]) << 24) | (((uint16_t)jpegBuffer[6]) << 16) | (((uint16_t)jpegBuffer[5]) << 8) | ((uint16_t)jpegBuffer[4]);
+
+        if(frameSize >= jpegBufferSize){
+          frameSize = 0;
+          //jpegBufferReadCount = 0;
+          frameDeliminatorAcquired = false;
+          cdc.println("ERROR: Received frame size is too big, something went wrong, searching for frame deliminator...");
+        }
+      }else{
+        // If the frame size was determined, get number of bytes to read, check if done filling, then fill if not done
+        uint16_t bytesToReadCount = frameSize - (jpegBufferReadCount+1);
+
+        if(bytesToReadCount <= 0){
+          frameSize = 0;
+          frameDeliminatorAcquired = false;
+          JPEGBufferFilled(jpegBufferReadCount);
+          jpegBufferReadCount = 0;
+          return true;
+        }
+
+        // Just in case, check if this read will take us out of bounds, if so, restart (shouldn't happen except for future changes forgetting about this)
+        if(jpegBufferReadCount+bytesToReadCount < frameSize){
+          jpegBufferReadCount += cdc.read(jpegBuffer + jpegBufferReadCount, bytesToReadCount);
+        }else{
+          // Not going to get reset by decode so do it here so it doesn't get stuck out of bounds forever
+          jpegBufferReadCount = 0;
+
+          frameSize = 0;
+          frameDeliminatorAcquired = false;
+          cdc.println("ERROR: Tried to place jpeg data out of bounds...");
+        }
+      }
+      if (millis() - liveTimeoutStart >= liveTimeoutLimitms) // Do timeout check if we're waiting for data
+      {
+        frameSize = 0; 
+        frameDeliminatorAcquired = false;
+        live = false;
+      }
+      // Buffer not filled yet, wait for more bytes
+      return false;
+    }else{
+      // Search for deliminator to get back to filling buffers or respond to commands
+      commandSearch(jpegBuffer);
+    }
+  }else if(millis() - liveTimeoutStart >= liveTimeoutLimitms){
+    // A timeout is a time to reset states of both jpeg buffers, reset everything
+    frameSize = 0; 
+    frameDeliminatorAcquired = false;
+    live = false;
+
+    // Wait for decoding to finish and then reset incoming jpeg data read counts (otherwise may start at something other than zero next time)
+  }
+
+  // No buffer filled, wait for more bytes
+  return false;
+}
+

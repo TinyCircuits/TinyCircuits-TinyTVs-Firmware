@@ -1,97 +1,529 @@
+//-------------------------------------------------------------------------------
+//  TinyCircuits RP2040TV Video Player, Display Component
+//
+//  Changelog:
+//  08/12/2022 Handed off the keys to the kingdom
+//  
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
+//  Refactored by Jason Marcum for portability
+//-------------------------------------------------------------------------------
+
+/*
+    This file is part of the RP2040TV Player.
+    RP2040TV Player is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+    RP2040TV Player is distributed in the hope that it will be useful, but
+    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+    You should have received a copy of the GNU General Public License along with
+    the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
+*/
+
+#include <TinyScreen.h>
+#include "globals_and_buffers.h"
+
+#define byteswap(x) (x >> 8) | (x << 8)
+static uint32_t seed = 0xDEADBEEF;
+
+inline uint32_t qrand()
+{
+  seed ^= seed << 13;
+  seed ^= seed >> 17;
+  seed ^= seed << 5;
+  return seed;
+}
+
+// TV effect colors
+const uint16_t colorOrMask1 = 0x8410;
+const uint16_t colorOrMask2 = 0xC618;
+const uint16_t colorOrMask3 = 0xE71C;
+const uint16_t colorOrMask4 = 0xF79E;
+
+const uint16_t colorAndMask1 = 0x0861;
+const uint16_t colorAndMask2 = 0x18E3;
+const uint16_t colorAndMask3 = 0x39E7;
+const uint16_t colorAndMask4 = 0x7BEF;
+
+int decodeJPEGIfAvailable() {
+  if (!getFilledJPEGBuffer() && !live)
+    return 1;
+  streamer.decode(getFilledJPEGBuffer(), getJPEGBufferLength(), JPEGDraw);
+  JPEGBufferDecoded();
+  return 0;
+}
+
+#ifdef TinyTVKit
+
+// SAMD21 board specific functions
+
+TinyScreen display = TinyScreen(TinyScreenPlus);
+#include "splashes/FileNotFoundSplash_96x64.h"
+#include "splashes/NoCardSplash_96x64.h"
+#include "splashes/StorageErrorSplash_96x64.h"
+#include "splashes/PlaybackErrorSplash_96x64.h"
+
+int HW_VIDEO_W = VIDEO_W;
+int HW_VIDEO_H = VIDEO_H;
+int IMG_XOFF = 0;
+int IMG_YOFF = 0;
+int IMG_W = VIDEO_W;
+int IMG_H = VIDEO_H;
+
 #include <JPEGDEC.h>                // minor customization
 
-#ifdef TinyTVMini
-const int VIDEO_X = 0;
-const int VIDEO_Y = 0;
-const int VIDEO_W = 64;
-const int VIDEO_H = 64;
+#include <GraphicsBuffer2.h>
+
+GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, 16, colorDepth16BPP);
+
+// JPEG callback is a framebuffer blit
+int JPEGDraw(JPEGDRAW* block) {
+  if(staticTimer > 0)
+  {
+    const int iters = 1;
+    for(int i = 0; i < iters; i++)
+    {
+      uint32_t staticPos = 0;
+      while (staticPos < block->iWidth * block->iHeight) {
+        /*
+        uint8_t currentRand = rand();
+        uint8_t currentRandSmall = ((currentRand >> 6 - (rand()) / 2)) & 3;
+        */
+        uint8_t currentRand = qrand();
+        uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+        if (currentRandSmall == 3) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorAndMask1);//black
+        } else if (currentRandSmall == 2) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorOrMask4);//white
+        } else if (currentRandSmall == 1) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorOrMask1);//black/grey
+        }
+        staticPos += (currentRand & 3) + 1;
+      }
+    }
+  }
+  if(nextVideoTimer != 0)
+  {
+    for (int i = 0; i < block->iWidth * block->iHeight; i++)
+    {
+      ((uint16_t *)block->pPixels)[i] &= byteswap(0b1110011110011100);
+    }
+  }
+  screenBuffer.setBuffer((uint8_t *)block->pPixels);
+  if (block->y < 8 && block->x+block->iWidth > IMG_W/2) {
+    char buf[10];
+    // Render stylizations
+    if (showChannelNumber) {
+      if ( showChannelTimer ) {
+        sprintf(buf, "CH%.2i", channelNumber);
+        if (IMG_H > 64) {
+          screenBuffer.setBuffer((uint8_t *)frameBuf);
+          screenBuffer.setCursor(IMG_W - 50, 5);
+          screenBuffer.print(buf);
+        } else {
+          screenBuffer.setCursor(IMG_W - 25, 5);
+          screenBuffer.print(buf);
+        }
+        showChannelTimer--;
+      }
+    }
+  }
+  if (block->y == 48) { 
+    if (showVolumeTimer > 0)
+    {
+      char volumeString[] = "|---------|";
+      volumeString[1 + (soundVolume * 8) / 255] = '+';
+      if (timeStamp) {
+        if (VIDEO_H > 64) {
+          //renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        } else {
+          //renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 18, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        }
+      } else {
+        if (VIDEO_H > 64) {
+          //renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
+          screenBuffer.setBuffer((uint8_t *)frameBuf);
+          screenBuffer.setCursor((VIDEO_W / 2) - 28, VIDEO_H - 15);
+          screenBuffer.print(volumeString);
+        } else {
+          //renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+          screenBuffer.setCursor((VIDEO_W / 2) - 28, VIDEO_H - 15 - (16 * 3));
+          screenBuffer.print(volumeString);
+        }
+      }
+      showVolumeTimer--;
+    }
+  }
+  if (true) {
+    while(!display.getReadyStatusDMA()) {}
+    display.endTransfer();
+    display.setX(block->x+IMG_XOFF, block->iWidth - 1+IMG_XOFF);
+    //display.setY(block->y, block->y + block->iHeight - 1);
+    display.setY(block->y+IMG_YOFF, VIDEO_H - 1 + IMG_YOFF);
+    display.startData();
+  }
+  display.writeBufferDMA((uint8_t *)block->pPixels, (block->iWidth * block->iHeight) * 2);
+  if (block->y != 48) {
+    delayMicroseconds(500 + 600);
+  }
+  return 1;
+}
+
+void JPEGBufferFilled(int length) {
+  decoderDataLength[currentWriteBuf] = length;
+  frameDecoded[currentWriteBuf] = false;
+  frameReady[currentWriteBuf] = true;
+}
+
+uint8_t * getFilledJPEGBuffer() {
+  if (frameReady[/*1 - */currentWriteBuf]) {
+    currentDecodeBuf = /*1 - */currentWriteBuf;
+    return videoBuf[/*1 - */currentWriteBuf];
+  }
+  return NULL;
+}
+
+void JPEGBufferDecoded() {
+  if(staticTimer > 0) staticTimer--;
+  decoderDataLength[currentDecodeBuf] = 0;
+  frameReady[currentDecodeBuf] = false;
+  frameDecoded[currentDecodeBuf] = true;
+}
+
+void  displayPlaybackError(char * filename) {
+  dbgPrint("Playback error: " + String(filename));
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+  display.writeBufferDMA((uint8_t *)PlaybackErrorSplash_96x64, VIDEO_W * VIDEO_H * 2);
+}
+
+void  displayCardNotFound() {
+  dbgPrint("Card not found!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+  display.writeBufferDMA((uint8_t *)NoCardSplash_96x64, VIDEO_W * VIDEO_H * 2);
+}
+
+void  displayFileSystemError() {
+  dbgPrint("Filesystem Error!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+  display.writeBufferDMA((uint8_t *)StorageErrorSplash_96x64, VIDEO_W * VIDEO_H * 2);
+}
+
+void  displayNoVideosFound() {
+  dbgPrint("No Videos Found!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+  display.writeBufferDMA((uint8_t *)FileNotFoundSplash_96x64, VIDEO_W * VIDEO_H * 2);
+}
+
+#else
+
+// RP2040 board specific functions
+
+#if defined(TinyTVMini)
+TinyScreen display = TinyScreen(RP2040TVMini);
 #include "splashes/FileNotFoundSplash_64x64.h"
 #include "splashes/NoCardSplash_64x64.h"
 #include "splashes/StorageErrorSplash_64x64.h"
 #include "splashes/PlaybackErrorSplash_64x64.h"
 #else
-const int VIDEO_X = 24;
-const int VIDEO_Y = 0;
-const int VIDEO_W = 216;
-const int VIDEO_H = 135;
+TinyScreen display = TinyScreen(RP2040TV);
 #include "splashes/FileNotFoundSplash_216x135.h"
 #include "splashes/NoCardSplash_216x135.h"
 #include "splashes/StorageErrorSplash_216x135.h"
 #include "splashes/PlaybackErrorSplash_216x135.h"
 #endif
 
-// Effects need the framebuffer declared first
-uint16_t frameBuf[VIDEO_W * VIDEO_H];
-// uraster does text rendering on top of the video
-uraster::frame fbFrame;
-uraster::renderer2d renderer(fbFrame);
-//FONT_INFO* font = thinPixel7_10ptFontInfo;
+int HW_VIDEO_W = VIDEO_W;
+int HW_VIDEO_H = VIDEO_H;
+int IMG_XOFF = 0;
+int IMG_YOFF = 0;
+int IMG_W = VIDEO_W;
+int IMG_H = VIDEO_H;
 
+#include <JPEGDEC.h>                // minor customization
 
+#include <GraphicsBuffer2.h>
+
+GraphicsBuffer2 screenBuffer = GraphicsBuffer2(VIDEO_W, VIDEO_H, colorDepth16BPP);
+
+// JPEG callback is a framebuffer blit
+int JPEGDraw(JPEGDRAW* block) {
+  if(staticTimer > 0)
+  {
+    #if defined(TinyTVMini)
+    const int iters = 2;
+    #else
+    const int iters = 1;
+    #endif
+    for(int i = 0; i < iters; i++)
+    {
+      uint32_t staticPos = 0;
+      while (staticPos < block->iWidth * block->iHeight) {
+        uint8_t currentRand = qrand();
+        uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+        if (currentRandSmall == 3) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorAndMask1);//black
+        } else if (currentRandSmall == 2) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorOrMask4);//white
+        } else if (currentRandSmall == 1) {
+          ((uint16_t *)block->pPixels)[staticPos] = byteswap(colorOrMask1);//black/grey
+        }
+        staticPos += (currentRand & 3) + 1;
+      }
+    }
+  }
+  if(nextVideoTimer != 0)
+  {
+    for (int i = 0; i < block->iWidth * block->iHeight; i++)
+    {
+      ((uint16_t *)block->pPixels)[i] &= byteswap(0b1110011110011100);
+    }
+  }
+  #if !defined(TinyTVMini)
+  int fbpos = (block->y)*IMG_W+block->x;
+  int bpos = 0;
+  int maxWidth = min(IMG_W-block->x, block->iWidth);
+  for(int by = 0; by < block->iHeight; by++)
+  {
+    for(int bx = 0; bx < maxWidth; bx++)
+    {
+      frameBuf[fbpos++] = block->pPixels[bpos++];
+    }
+    fbpos += IMG_W-maxWidth;
+    bpos += block->iWidth-maxWidth;
+  }
+  #endif
+  screenBuffer.setBuffer((uint8_t *)block->pPixels);
+  if (block->y < 8 && block->x+block->iWidth > IMG_W/2) {
+    char buf[10];
+    // Render stylizations
+    if (showChannelNumber) {
+      if ( showChannelTimer ) {
+        sprintf(buf, "CH%.2i", channelNumber);
+        if (IMG_H > 64) {
+          screenBuffer.setBuffer((uint8_t *)frameBuf);
+          screenBuffer.setCursor(IMG_W - 50, 5);
+          screenBuffer.print(buf);
+        } else {
+          screenBuffer.setCursor(IMG_W - 25, 5);
+          screenBuffer.print(buf);
+        }
+        showChannelTimer--;
+      }
+    }
+  }
+  #if defined(TinyTVMini)
+  if (block->y == 48) {
+  #else
+  if (block->y + block->iHeight > VIDEO_H-16) {
+  #endif    
+    if (showVolumeTimer > 0)
+    {
+      char volumeString[] = "|---------|";
+      volumeString[1 + (soundVolume * 8) / 255] = '+';
+      if (timeStamp) {
+        if (VIDEO_H > 64) {
+          //renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        } else {
+          //renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 18, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+        }
+      } else {
+        if (VIDEO_H > 64) {
+          //renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
+          screenBuffer.setBuffer((uint8_t *)frameBuf);
+          screenBuffer.setCursor((VIDEO_W / 2) - 28, VIDEO_H - 15);
+          screenBuffer.print(volumeString);
+        } else {
+          //renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
+          screenBuffer.setCursor((VIDEO_W / 2) - 28, VIDEO_H - 15 - (16 * 3));
+          screenBuffer.print(volumeString);
+        }
+      }
+      showVolumeTimer--;
+    }
+  }
+  #if defined(TinyTVMini)
+  int fbpos = (block->y+IMG_YOFF)*IMG_W+block->x+IMG_XOFF;
+  int bpos = 0;
+  int maxWidth = min(IMG_W-block->x-IMG_XOFF, block->iWidth);
+  for(int by = 0; by < block->iHeight; by++)
+  {
+    for(int bx = 0; bx < maxWidth; bx++)
+    {
+      frameBuf[fbpos++] = block->pPixels[bpos++];
+    }
+    fbpos += IMG_W-maxWidth;
+    bpos += block->iWidth-maxWidth;
+  }
+  #endif
+  return 1;
+}
+
+void JPEGBufferFilled(int length) {
+  decoderDataLength[currentWriteBuf] = length;
+  frameDecoded[currentWriteBuf] = false;
+  frameReady[currentWriteBuf] = true;
+  currentWriteBuf = 1 - currentWriteBuf;
+}
+
+uint8_t * getFilledJPEGBuffer() {
+  if (frameReady[1 - currentWriteBuf]) {
+    currentDecodeBuf = 1 - currentWriteBuf;
+    return videoBuf[1 - currentWriteBuf];
+  }
+  return NULL;
+}
+
+void JPEGBufferDecoded() {
+  while(!display.getReadyStatusDMA()){} 
+  display.startCommand();
+  display.setX(VIDEO_X+IMG_XOFF, VIDEO_X+IMG_XOFF+IMG_W-1);
+  display.setY(VIDEO_Y+IMG_YOFF, VIDEO_Y+IMG_YOFF+IMG_H-1);
+  display.endTransfer();
+  display.startData();
+  display.writeBufferDMA((uint8_t*)frameBuf, IMG_W*IMG_H*2);
+  if(staticTimer > 0) staticTimer--;
+  decoderDataLength[currentDecodeBuf] = 0;
+  frameReady[currentDecodeBuf] = false;
+  frameDecoded[currentDecodeBuf] = true;
+}
+
+void  displayPlaybackError(char * filename) {
+  dbgPrint("Playback error: " + String(filename));
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+#if defined(TinyTVMini)
+  display.writeBufferDMA((uint8_t*)PlaybackErrorSplash_64x64, VIDEO_W * VIDEO_H * 2);
+#else
+  display.writeBufferDMA((uint8_t*)PlaybackErrorSplash_216x135, VIDEO_W * VIDEO_H * 2);
+#endif
+}
+
+void  displayCardNotFound() {
+  dbgPrint("Card not found!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+#if defined(TinyTVMini)
+  display.writeBufferDMA((uint8_t*)NoCardSplash_64x64, VIDEO_W * VIDEO_H * 2);
+#else
+  display.writeBufferDMA((uint8_t*)NoCardSplash_216x135, VIDEO_W * VIDEO_H * 2);
+#endif
+}
+
+void  displayFileSystemError() {
+  dbgPrint("Filesystem Error!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+#if defined(TinyTVMini)
+  display.writeBufferDMA((uint8_t*)StorageErrorSplash_64x64, VIDEO_W * VIDEO_H * 2);
+#else
+  display.writeBufferDMA((uint8_t*)StorageErrorSplash_216x135, VIDEO_W * VIDEO_H * 2);
+#endif
+}
+
+void  displayNoVideosFound() {
+  dbgPrint("No Videos Found!");
+  display.endTransfer();
+  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
+  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
+  display.startData();
+#if defined(TinyTVMini)
+  display.writeBufferDMA((uint8_t*)FileNotFoundSplash_64x64, VIDEO_W * VIDEO_H * 2);
+#else
+  display.writeBufferDMA((uint8_t*)FileNotFoundSplash_216x135, VIDEO_W * VIDEO_H * 2);
+#endif
+}
+
+void displayUSBMSCmessage() {
+  #ifdef TinyTVMini
+  display.setCursor(5, 10);
+  display.print("USB Mode");
+  display.setCursor(5, 20);
+  display.print("Eject or");
+  display.setCursor(5, 30);
+  display.print("disconnect");
+  display.setCursor(5, 40);
+  display.print("to continue");
+  #else
+  display.setCursor(85+24, 45);
+  display.print("USB Mode");
+  display.setCursor(85+24, 55);
+  display.print("Eject or");
+  display.setCursor(85+24, 65);
+  display.print("disconnect");
+  display.setCursor(85+24, 75);
+  display.print("to continue");
+  #endif
+  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
+}
+
+#endif
+
+// These functions are similar across all platforms
 
 void initializeDisplay() {
   // Initialize TFT
-  tft.begin();
-  tft.setRotation(1);
-  //tft.fillScreen(0);
-  tft.setAddrWindow(0, 0, VIDEO_X + VIDEO_W, VIDEO_Y + VIDEO_H);
-  tft.pushColor(0x0000, (VIDEO_X + VIDEO_W) * (VIDEO_Y + VIDEO_H));
-  tft.setAddrWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
-  tft.setSwapBytes(true);
-  tft.initDMA();
-  tft.startWrite();
-
-  // Set up target frame for renderer
-  fbFrame.bufPtr = &frameBuf[0];
-  fbFrame.xs = VIDEO_W;
-  fbFrame.ys = VIDEO_H;
+  display.begin();
+  display.setBitDepth(1);
+  display.setColorMode(TSColorModeRGB);
+  #ifndef TinyTVKit
+  display.setFlip(false);
+  #else
+  display.setFlip(true);
+  #endif
+  display.clearScreen();
+  display.setFont(thinPixel7_10ptFontInfo);
+  display.initDMA();
 
 
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-
+  if (screenBuffer.begin()) {
+    dbgPrint("malloc error");
+  }
+  screenBuffer.setFont(thinPixel7_10ptFontInfo);
+#ifndef TinyTVKit
 #ifdef TinyTVMini
   digitalWrite(9, HIGH);
 #else
   digitalWrite(9, LOW);
 #endif
+#endif
 }
-
-// JPEG callback is a framebuffer blit
-int JPEGDraw(JPEGDRAW* block) {
-  // Check that the block is within bounds of screen, otherwise, don't draw it
-  if (block->x < VIDEO_W && block->y < VIDEO_H) {
-    for (int bx = 0; bx < block->iWidth; bx++) {
-      for (int by = 0; by < block->iHeight; by++) {
-        int x = block->x + bx;
-        int y = block->y + by;
-
-        // Check that the pixel within the block is within screen bounds and then draw
-        if (x < VIDEO_W && y < VIDEO_H) {
-          int bufferIndex = y * VIDEO_W + x;
-          int blockPixelIndex = by * block->iWidth + bx;
-          frameBuf[bufferIndex] = ((uint16_t*)block->pPixels)[blockPixelIndex];
-        }
-      }
-    }
-  }
-
-  return 1;
-}
-
-
-
-volatile bool frameReady[2] = {false, false};
-volatile bool frameDecoded[2] = {true, true};
-volatile int decoderDataLength[2] = {0, 0};
-volatile uint8_t currentWriteBuf = 0;
-volatile uint8_t currentDecodeBuf = 0;
-volatile uint32_t lastBufferAssignment = 0;
 
 void resetBuffers() {
   frameReady[0] = false; frameReady[1] = false;
   frameDecoded[0] = true; frameDecoded[1] = true;
-  cdc.println("resetBuffers");
+  dbgPrint("resetBuffers");
+}
+
+void setScreenAddressWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h) {
+  display.endTransfer();
+  display.setX(x, x+w);
+  display.setY(y, y+h);
+  display.startData();
+}
+
+int getJPEGBufferLength() {
+  return decoderDataLength[currentDecodeBuf];
 }
 
 uint8_t * getFreeJPEGBuffer() {
@@ -105,230 +537,138 @@ uint8_t * getFreeJPEGBuffer() {
   return NULL;
 }
 
-void JPEGBufferFilled(int length) {
-  decoderDataLength[currentWriteBuf] = length;
-  frameDecoded[currentWriteBuf] = false;
-  frameReady[currentWriteBuf] = true;
-  currentWriteBuf = 1 - currentWriteBuf;
-}
-
-uint8_t * getFilledJPEGBuffer() {
-  //  if (frameReady[0]) {
-  //    currentDecodeBuf = 0;
-  //    return videoBuf[0];
-  //  } else if (frameReady[1]) {
-  //    currentDecodeBuf = 1;
-  //    return videoBuf[1];
-  //  }
-  if (frameReady[1 - currentWriteBuf]) {
-    currentDecodeBuf = 1 - currentWriteBuf;
-    return videoBuf[1 - currentWriteBuf];
+void core2Loop()
+{
+  if (TVscreenOffMode) {
+    return;
+  } 
+  if (decodeJPEGIfAvailable()) {
+    return;
   }
-  return NULL;
+
+  return;
 }
 
-int getJPEGBufferLength() {
-  return decoderDataLength[currentDecodeBuf];
+void writeToScreenDMA(uint16_t * bufToWrite, uint16_t count) {
+  display.writeBufferDMA((uint8_t *)bufToWrite, count * 2);
 }
 
-void JPEGBufferStartDecode() {
-  //frameReady[currentDecodeBuf] = false;
+void waitForScreenDMA() {
+  while(!display.getReadyStatusDMA()) {}  
 }
-
-void JPEGBufferDecoded() {
-  decoderDataLength[currentDecodeBuf] = 0;
-  frameReady[currentDecodeBuf] = false;
-  frameDecoded[currentDecodeBuf] = true;
-}
-
-
-
-
-int decodeJPEGIfAvailable() {
-  if (!getFilledJPEGBuffer())
-    return 1;
-
-  JPEGBufferStartDecode();
-  if (!jpeg.openRAM((uint8_t *)getFilledJPEGBuffer(), getJPEGBufferLength(), JPEGDraw))
-  {
-    dbgPrint("Could not open frame from RAM!");
-  }
-  jpeg.setPixelType(RGB565_LITTLE_ENDIAN);
-  jpeg.setMaxOutputSize(2048);
-  jpeg.decode(0, 0, 0); // Weakest link and largest overhead
-
-  JPEGBufferDecoded();
-
-  return 0;
-}
-
-
-
-
-
-
-void core2Loop(){
-  if(effects.processStartedEffects(frameBuf, VIDEO_W, VIDEO_H)){
-    if (soundVolume != 0) playWhiteNoise = true;
-    tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-    tft.dmaWait();
-  }else{
-    playWhiteNoise = false;
-
-    if(TVscreenOffMode){
-      if(!backlightTurnedOff){
-        // Turn backlight off
-        #ifdef TinyTVMini
-        #else
-          digitalWrite(9, HIGH);
-          backlightTurnedOff = true;
-        #endif
-      }
-      return;
-    }
-
-    if (!streamer.live && decodeJPEGIfAvailable()) {
-      return;
-    }
-
-    char buf[48];
-    // Render stylizations
-    if (showChannelNumber && !streamer.live) {
-      if ( showChannelTimer ) {
-        sprintf(buf, "CH%.2i", channelNumber);
-        if (VIDEO_H > 64) {
-          renderer.drawStr( VIDEO_W - 50, 10, buf, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-        } else {
-          renderer.drawStr(VIDEO_W - 25, 5, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-        }
-        showChannelTimer--;
-      }
-    }
-
-
-
-
-    if (!streamer.live && timeStamp && autoplayMode != 2)
-    {
-      uint64_t _t = ((millis() - tsMillisInitial));
-      int h = (_t / 3600000);
-      int m = (_t / 60000) % 60;
-      int s = (_t / 1000) % 60;
-      sprintf(buf, "%.2i:%.2i:%.2i", h, m, s);
-      if (VIDEO_H > 64) {
-        renderer.drawStr(16, VIDEO_H - 20, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-      }else{
-        renderer.drawStr(12, VIDEO_H - 10, buf, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-      }
-    }
-
-    if (showVolumeTimer > 0)
-    {
-      char volumeString[] = "|---------|";
-      volumeString[1 + (soundVolume * 8) / 255] = '+';
-      if (timeStamp) {
-        if (VIDEO_H > 64) {
-          renderer.drawStr(VIDEO_W - strlen(volumeString) * 7, VIDEO_H - 20, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-        } else {
-          renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 18, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-        }
-      } else {
-        if (VIDEO_H > 64) {
-          renderer.drawStr((VIDEO_W / 2) - 20, VIDEO_H - 25, volumeString, uraster::color(255, 255, 255), liberationSansNarrow_14ptFontInfo);
-        } else {
-          renderer.drawStr((VIDEO_W / 2) - 28, VIDEO_H - 15, volumeString, uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-        }
-      }
-      showVolumeTimer--;
-    }
-
-    if(streamer.live){
-      streamer.decode(videoBuf[0], videoBuf[1], frameBuf, JPEGDraw);
-      effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
-      writeScreenBuffer();
-      return;
-    }
-
-    writeScreenBuffer();
-    
-  }
-}
-
-
 
 void writeScreenBuffer() {
-  effects.cropCorners(frameBuf, VIDEO_W, VIDEO_H);
-  tft.setAddrWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-  //tft.dmaWait();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
+  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
+  waitForScreenDMA();
 }
-
-void  displayPlaybackError(char * filename) {
-  dbgPrint("Playback error: " + String(filename));
-  tft.setSwapBytes(false);
-  #ifdef TinyTVMini
-  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_64x64, VIDEO_W * VIDEO_H);
-  #else
-  tft.pushPixelsDMA((uint16_t*)PlaybackErrorSplash_216x135, VIDEO_W * VIDEO_H);
-  #endif
-  tft.setSwapBytes(true);
-}
-
-void  displayCardNotFound() {
-  dbgPrint("Card not found!");
-  tft.setSwapBytes(false);
-  #ifdef TinyTVMini
-  tft.pushPixelsDMA((uint16_t*)NoCardSplash_64x64, VIDEO_W * VIDEO_H);
-  #else
-  tft.pushPixelsDMA((uint16_t*)NoCardSplash_216x135, VIDEO_W * VIDEO_H);
-  #endif
-  tft.setSwapBytes(true);
-}
-
-void  displayFileSystemError() {
-  dbgPrint("Filesystem Error!");
-  tft.setSwapBytes(false);
-  #ifdef TinyTVMini
-  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_64x64, VIDEO_W * VIDEO_H);
-  #else
-  tft.pushPixelsDMA((uint16_t*)StorageErrorSplash_216x135, VIDEO_W * VIDEO_H);
-  #endif
-  tft.setSwapBytes(true);
-}
-
-void  displayNoVideosFound() {
-  dbgPrint("Filesystem Error!");
-  tft.setSwapBytes(false);
-  #ifdef TinyTVMini
-  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_64x64, VIDEO_W * VIDEO_H);
-  #else
-  tft.pushPixelsDMA((uint16_t*)FileNotFoundSplash_216x135, VIDEO_W * VIDEO_H);
-  #endif
-  tft.setSwapBytes(true);
-  delay(10);
-}
-
-
-
-void displayUSBMSCmessage() {
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  if(VIDEO_H > 64){
-    renderer.drawStr(85, 45, "USB Mode", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(85, 55, "Eject or", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(85, 65, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(85, 75, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  }else{
-    renderer.drawStr(5, 10, "USB Mode", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(5, 20, "Eject or", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(5, 30, "disconnect", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-    renderer.drawStr(5, 40, "to continue", uraster::color(255, 255, 255), thinPixel7_10ptFontInfo);
-  }
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
-}
-
 
 void clearDisplay() {
-  renderer.target->fillBuf(uraster::color(0, 0, 0));
-  tft.dmaWait();
-  tft.pushPixelsDMA(frameBuf, VIDEO_W * VIDEO_H);
+  waitForScreenDMA();
+  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
+}
+
+void changeChannelEffect()
+{
+  waitForScreenDMA();
+  staticTimer = (1000000/targetFrameTime) / 3;
+}
+
+void tubeOffEffect() {
+  delay(5);
+  if (pauseRadius) {
+    int xCircle = pauseRadius / 2;
+    int yCircle = 0;
+    int radiusError = 1 - xCircle;
+    uint8_t radiusLimits[VIDEO_H];
+    uint16_t staticBuf[VIDEO_W];
+    memset(radiusLimits, 0, sizeof(radiusLimits));
+    while (xCircle >= yCircle) {
+      radiusLimits[VIDEO_H/2-2 + yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 - yCircle] = xCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 - xCircle] = yCircle * 3 / 2;
+      radiusLimits[VIDEO_H/2-2 + xCircle] = yCircle * 3 / 2;
+      yCircle++;
+      if (radiusError < 0)
+      {
+        radiusError += 2 * yCircle + 1;
+      } else {
+        xCircle--;
+        radiusError += 2 * (yCircle - xCircle) + 1;
+      }
+    }
+    // Need a full framebuffer for this to work
+    for (int y = 0; y < VIDEO_H; y++) {
+      waitForScreenDMA();
+      memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
+      for (int x = 0; x < VIDEO_W / 2 - radiusLimits[y]; x++) {
+        ((uint16_t *)staticBuf)[x] &= byteswap(0x39E7);
+        ((uint16_t *)staticBuf)[x] = (((uint16_t *)staticBuf)[x] >> 1);
+      }
+      for (int x = VIDEO_W / 2 + radiusLimits[y]; x < VIDEO_W; x++) {
+        ((uint16_t *)staticBuf)[x] &= byteswap(0x39E7);
+        ((uint16_t *)staticBuf)[x] = (((uint16_t *)staticBuf)[x] >> 1);
+      }
+      setScreenAddressWindow(VIDEO_X, y+1,VIDEO_W, 1);
+      writeToScreenDMA(staticBuf, VIDEO_W);
+    }
+    memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
+    for (int y = 0; y < VIDEO_H; y++) {
+      waitForScreenDMA();
+      memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
+      if (radiusLimits[y]) {
+        for (int x = VIDEO_W / 2 - radiusLimits[y] - 3; x < VIDEO_W / 2 + radiusLimits[y] + 3; x) {
+          uint8_t currentRand = qrand();
+          uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+          if (x == VIDEO_W / 2 - radiusLimits[y] - 3)
+            x += (currentRand & 3);
+          if (currentRandSmall == 3) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorAndMask1);//black
+          } else if (currentRandSmall == 2) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorOrMask4);//white
+          } else if (currentRandSmall == 1) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorOrMask1);//black/grey
+          }
+          x += (currentRand & 3) * 2;
+        }
+      }
+      setScreenAddressWindow(VIDEO_X, y+1,VIDEO_W, 1);
+      writeToScreenDMA(staticBuf, VIDEO_W);
+    }
+    pauseRadius -= pauseRadius / 8;
+    if (pauseRadius < 12) {
+      pauseRadius--;
+
+      if (pauseRadius < 6 && pauseRadius > 3 ) {
+        for (int y = VIDEO_H / 2 - 2; y < VIDEO_H / 2 + 1; y++) {
+          waitForScreenDMA();
+          memset(staticBuf, 0, VIDEO_W * sizeof(uint16_t));
+          for (int x = VIDEO_W / 2 - 30; x < VIDEO_W / 2 + 30; x++) {
+            uint8_t currentRand = rand();
+            uint8_t currentRandSmall = ((currentRand >> 4) & 3);
+            if (x == VIDEO_W / 2 - radiusLimits[y] - 3)
+              x += (currentRand & 3);
+            if (currentRandSmall == 3) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorAndMask1);//black
+          } else if (currentRandSmall == 2) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorOrMask4);//white
+          } else if (currentRandSmall == 1) {
+            ((uint16_t *)staticBuf)[x] = byteswap(colorOrMask1);//black/grey
+          }
+            x += (currentRand & 3) * 2;
+          }
+          setScreenAddressWindow(VIDEO_X, y,VIDEO_W, 1);
+          writeToScreenDMA(staticBuf, VIDEO_W);
+        }
+      }
+      if (pauseRadius < 6) {
+        delay((6 - pauseRadius) * 15);
+      }
+    }
+    if (pauseRadius <= 0) {
+      pauseRadius = 0;
+    }
+  }
+  waitForScreenDMA();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W-1, VIDEO_H-1);
 }

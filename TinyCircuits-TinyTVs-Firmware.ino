@@ -8,8 +8,10 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
+//  
+//  02/08/2023 Cross-platform base committed
 //
-//  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
 //
 // packages\rp2040\hardware\rp2040\2.5.2\variants\rpipico  ->  #define PIN_LED        (12u)
 // packages\rp2040\hardware\rp2040\2.5.2\libraries\Adafruit_TinyUSB_Arduino\src\arduino\ports\rp2040 tweaked CFG_TUD_MSC_EP_BUFSIZE to 512*8
@@ -26,68 +28,86 @@
     WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
     or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
     You should have received a copy of the GNU General Public License along with
-    the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
+    the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>  .
 */
 
-#define TinyTVMini 1
+// Select ONE from this list!
+
+#define TINYTV2_COMPILE
+//#define TINYTV2_MINI_COMPILE
+//#define TINYTV_KIT_COMPILE
+
+#ifdef TINYTV_KIT_COMPILE
+
+  #define TinyTVKit 1
+  #define TinyTVMini 1
+  #define IR_INPUT_PIN 3
+  #define Serial SerialUSB
+
+#elif defined(TINYTV2_MINI_COMPILE)
+
+  #define TinyTVMini 1
+  #define IR_INPUT_PIN 1
+
+#elif defined(TINYTV2_COMPILE)
+
+  #define IR_INPUT_PIN 1
+
+#endif
 
 // Uncomment to compile debug version
-// #define DEBUGAPP (true)
-
-//TinyIRReceiver library wants this..
-#define IR_INPUT_PIN 1
+//#define DEBUGAPP (true)
 
 // This include order matters
 #include <SPI.h>
-#include <TFT_eSPI.h>               // Custom for OLED
-#include <SdFat.h>                  // Custom SdFat for RP2040 
+
+#include <TinyScreen.h>
+#include <SdFat.h>                  // Custom SdFat for RP2040
 #include "TinyIRReceiver.hpp"       // Unmodified IR library
 #include <JPEGDEC.h>                // minor customization
-#include "hardware/pwm.h"           // RP2040 API
-#include "src/uraster/uraster.hpp"  // Non-video graphics library
-#include <Adafruit_TinyUSB.h>
-#include "screenEffects.h"
 #include "JPEGStreamer.h"
 #include "globals_and_buffers.h"    // Big fat statically-allocate-everything header
+#ifndef TinyTVKit
+#include "hardware/pwm.h"           // RP2040 API
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
-
+#endif
 
 int nextVideoError = 0;
 int prevVideoError = 0;
 bool showNoVideoError = false;
 uint64_t TVscreenOffModeStartTime = 0;
+extern TinyScreen display;
 
 void setup() {
-  initalizePins();
-  
+#ifdef DEBUGAPP
+  cdc.println("test");
+#endif
+  if (!initPCIInterruptForTinyReceiver()) {
+    dbgPrint("No interrupt available for IR_INPUT_PIN");
+  }
+
+#ifndef TinyTVKit // MSC time
   Serial.end();
   cdc.begin(0);
-
-  // Do MSC setup quickly so PC recognizes us as a mass storage device
   USBMSCInit();
+#endif
+
+  yield();
+  delay(100);
   initializeDisplay();
-  //Serial.begin(115200);
-  // Wait for the serial monitor to wake up in debug mode
-
-  // Set crop radius to TinyTV 2's best looking value;
-  #ifdef TinyTVMini
-    effects.setCropRadius(8);
-  #else
-    effects.setCropRadius(25);
-  #endif
-
+  initalizePins();
+  // Do MSC setup quickly so PC recognizes us as a mass storage device
   if (!initializeSDcard()) {
     displayCardNotFound();
     while (1) {
     }
   }
+#ifndef TinyTVKit
   USBMSCReady();
-
+#endif
   if (!initializeFS()) {
     displayFileSystemError();
     while (1) {
-      USBMSCStart();
-      handleUSBMSC(false);
     }
   }
 
@@ -99,21 +119,18 @@ void setup() {
   } else {
     showNoVideoError = true;
   }
+#ifndef TinyTVKit // MSC loop
 
-
-  setAudioSampleRate(10000);
-  targetFrameTime = (1000000) / 24;
-
-
-  if (!initPCIInterruptForTinyReceiver()) {
-    cdc.println("No interrupt available for IR_INPUT_PIN");
-  }
-
+#endif
+  nextVideo();
 }
-
-
+bool skipNextFrame = false;
+unsigned long totalTime = 0;
 void loop() {
-  if (USBJustConnected()) {
+  
+#ifndef TinyTVKit // MSC loop
+  
+  if (USBJustConnected() && !live) {
     setAudioSampleRate(100);
     USBMSCStart();
     delay(50);
@@ -125,15 +142,16 @@ void loop() {
       #ifdef TinyTVMini
       #else
         digitalWrite(9, LOW);
-        backlightTurnedOff = false;
+        //backlightTurnedOff = false;
       #endif
     }
   }
-  if (handleUSBMSC(powerButtonPressed())) {
-    //USBMSC active:
-    return;
-  }
-  if (USBMSCJustStopped()) {
+  if(!live)
+    if (handleUSBMSC(powerButtonPressed())) {
+      //USBMSC active:
+      return;
+    }
+  else if (!live && USBMSCJustStopped()) {
     //USBMSC ejected, return to video playback:
     clearPowerButtonPressInt();
     loadSettings();
@@ -146,9 +164,7 @@ void loop() {
       showNoVideoError = true;
     }
   }
-
-  //check for streaming data here?
-
+#endif
 
   if (showNoVideoError) {
     displayNoVideosFound();
@@ -159,47 +175,72 @@ void loop() {
   // IR remote using NEC codes for next/previous channel, volume up and down, and mute
   IRInput();
 
-  // This needs called all the time to consume potential serial data and switch to live mode
-  streamer.fillBuffers(videoBuf[0], videoBuf[1], sizeof(videoBuf[0])/sizeof(videoBuf[0][0]));
+  #ifndef TinyTVKit
+  if(getFreeJPEGBuffer() && incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE))
+  {
+    // ???
+  }
+  else
+  {
+
+  }
+  #endif
 
   // Hardware encoder/button input
   updateButtonStates();
 
   // Handle any input flags
-  if (powerInput) {
+  if(powerInput)
+  {
     powerInput = false;
-    if (!TVscreenOffMode) {
-      TVscreenOffMode = true;
-      TVscreenOffModeStartTime = millis();
-      if (doStaticEffects) effects.startChangeChannelEffect();
-      playWhiteNoise = false;
-      clearAudioBuffer();
-      //memset(audioBuf, 127, AUDIOBUF_SIZE);
-      //memcpy(audioBuf, shutoff, AUDIOBUF_SIZE);
-      //sleep_ms(100);//wait to play?
-
-      // Note, the screen backlight gets turned off when the effects stop running (core 2)
-      effects.startTurnOffEffect();
-      //      digitalWrite(9, HIGH);
-      //?digitalWrite(SPK_EN, LOW);
-      clearDisplay();
-    } else {
-      // Turn backlight on
-      #ifdef TinyTVMini
-      #else
+    if (doStaticEffects) changeChannelEffect();
+    if (!TVscreenOffMode) powerDownTimer = micros() + 1000000/3;
+    else powerDownTimer = micros() + 1000000/6;
+  }
+  if(powerDownTimer > micros())
+  {
+    if (powerDownTimer-2*targetFrameTime <= micros()) {
+      powerDownTimer = micros();
+      if (!TVscreenOffMode) {
+        paused = true;
+        TVscreenOffMode = true;
+        TVscreenOffModeStartTime = millis();
+        delay(30);
+        clearAudioBuffer();
+        while(!display.getReadyStatusDMA()) {}
+        display.endTransfer();
+        display.clearScreen();
+        #ifdef TinyTVMini
+        pauseRadius = 24;
+        #else
+        pauseRadius = 56;
+        #endif
+        while (pauseRadius > 3) tubeOffEffect();
+        #ifndef TinyTVKit
+          #ifdef TinyTVMini
+            digitalWrite(9, LOW);
+            display.off();
+          #else
+            digitalWrite(9, HIGH);
+            display.off();
+          #endif
+        #else
+        display.off();
+        #endif
+      } else {
+        TVscreenOffMode = false;
+        clearAudioBuffer();
+        showChannelTimer = 120;
+        paused = false;
+        #ifndef TinyTVKit
+        #ifdef TinyTVMini
+        digitalWrite(9, HIGH);
+        #else
         digitalWrite(9, LOW);
-        backlightTurnedOff = false;
-      #endif
-
-      TVscreenOffMode = false;
-      if (doStaticEffects) effects.startChangeChannelEffect();
-      playWhiteNoise = false;
-      clearAudioBuffer();
-      showChannelTimer = 120;
-
-      //tsMillisInitial += millis() - lowPowerStartTime;
-      ////    digitalWrite(9, LOW);
-      //if (!mute) digitalWrite(SPK_EN, HIGH);
+        #endif
+        #endif
+        display.on();
+      }
     }
   }
   if (muteInput) {
@@ -208,11 +249,14 @@ void loop() {
       setMute(!isMute());
     }
   }
-  if (channelUpInput && !streamer.live) {
+
+  if (channelUpInput && !live) {
     channelUpInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) effects.startChangeChannelEffect();
+      if (doStaticEffects) changeChannelEffect();
+      //nextVideoTimer = (1000000/targetFrameTime) / 6;
+      //#endif
       if (nextVideo()) {
         nextVideoError = millis();
       } else {
@@ -220,11 +264,13 @@ void loop() {
       }
     }
   }
-  if (channelDownInput && !streamer.live) {
+  if (channelDownInput && !live) {
     channelDownInput = false;
     if (!TVscreenOffMode) {
       if (autoplayMode == 2) seekLivePos = true;
-      if (doStaticEffects) effects.startChangeChannelEffect();
+      if (doStaticEffects) changeChannelEffect();
+      //nextVideoTimer = -(1000000/targetFrameTime) / 6;
+      //#endif
       if (prevVideo()) {
         prevVideoError = millis();
       } else {
@@ -232,21 +278,44 @@ void loop() {
       }
     }
   }
-  if (volUpInput && !streamer.live) {
+  /*
+  if(nextVideoTimer < 0)
+  {
+    nextVideoTimer++;
+  }
+  if(nextVideoTimer > 0)
+  {
+    nextVideoTimer--;
+    if(nextVideoTimer == 0)
+    {
+      if (nextVideo()) {
+        nextVideoError = millis();
+      } else {
+        nextVideoError = 0;
+      }
+    }
+  }
+  */
+  if (volUpInput && !live) {
     volUpInput = false;
     if (!TVscreenOffMode) {
+      dbgPrint("v up");
       soundVolume += 32;
-      #ifdef TinyTVMini
-        if (soundVolume > 256) soundVolume = 0;
+      if (soundVolume >= 256)
+      {
+      #ifndef TinyTVMini
+        soundVolume = 256;
       #else
-        if (soundVolume >= 256) soundVolume = 256;
+        soundVolume &= 0xFF; // Wrap audio around on the mini because we have no vol. down
       #endif
+      }
       showVolumeTimer = 120;
     }
   }
-  if (volDownInput && !streamer.live) {
+  if (volDownInput && !live) {
     volDownInput = false;
     if (!TVscreenOffMode) {
+      dbgPrint("v down");
       soundVolume -= 32;
       if (soundVolume < 0) soundVolume = 0;
       showVolumeTimer = 120;
@@ -261,12 +330,9 @@ void loop() {
     return;
   }
 
-  if(streamer.live){
-    return;
-  }
+  if(live) return;
 
-
-  uint64_t t0 = time_us_64();
+  uint64_t t0 = micros();
 
   if (settingsNeedSaved)
   {
@@ -275,8 +341,6 @@ void loop() {
     settingsNeedSaved = false;
     dbgPrint("Saved settings file");
   }
-
-
 
   if (nextVideoError) {
     if ( millis() - nextVideoError < 3000) {
@@ -297,31 +361,37 @@ void loop() {
     }
     return;
   }
-
-
-
-
-
-
+  
   if (isAVIStreamAvailable()) {
     uint32_t len = nextChunkLength();
-    //cdc.println(len);
     if (len > 0) {
       if (isNextChunkAudio()) {
+        uint32_t t1 = micros();
         // Found a chunk of audio, load it into the buffer
         uint8_t audioBuffer[512];
         int bytes = readNextChunk(audioBuffer, sizeof(audioBuffer));
         addToAudioBuffer(audioBuffer, bytes);
+        t1 = micros() - t1;
+
+        totalTime += t1;
       } else if (isNextChunkVideo()) {
         // Found a chunk of video, decode it
         // Read the compressed JFIF data into the video buffer
-        if (frameWaitDurationElapsed() && getFreeJPEGBuffer()) {
+        if (skipNextFrame) {
+          skipChunk();
+          skipNextFrame = false;
+        } else if (frameWaitDurationElapsed() && getFreeJPEGBuffer()) {
+          uint32_t t1 = micros();
           readNextChunk(getFreeJPEGBuffer(), VIDEOBUF_SIZE);
           JPEGBufferFilled(len);
+          t1 = micros() - t1;
+
+          totalTime += t1;
+
         }
       } else {
-        cdc.print("chunk unrecognized ");
-        cdc.println(len);
+        dbgPrint("chunk unrecognized ");
+        dbgPrint(String(len));
         if (autoplayMode != 0) {
           nextVideo();
         } else {
@@ -335,7 +405,7 @@ void loop() {
       if (nextChunkLength() == 0) {
         dbgPrint("Two zero length chunks, skipping..");
 
-        if (doStaticEffects) effects.startChangeChannelEffect();
+        if (doStaticEffects) changeChannelEffect();
         // Find a new video to play or loop
         if (autoplayMode != 0) {
           nextVideo();
@@ -346,37 +416,62 @@ void loop() {
     }
   }
 
-  uint64_t t1 = time_us_64();
-  //dbgPrint("took " + String(uint32_t(t1 - t0)) + "us");
+
+  unsigned long t1 = micros();
+#ifdef TinyTVKit
+  core2Loop();
+#endif
+  t1 = micros() - t1;
+
+  if (t1 > 5000 && !live) {
+
+    if (t1 + totalTime > targetFrameTime) {
+      dbgPrint(String((uint32_t) (t1 + totalTime) - (uint32_t)targetFrameTime));
+      dbgPrint(" ");
+      dbgPrint(String(audioSamplesInBuffer()));
+      if (audioSamplesInBuffer() < 200) {
+        skipNextFrame = true;
+        dbgPrint("Setting frameskip true, buffer is behind!");
+      }
+      else
+      {
+        skipNextFrame = false;
+      }
+    }
+    totalTime = 0;
+  }
+
+  if (audioSamplesInBuffer() < 100) {
+    dbgPrint(String(audioSamplesInBuffer()));
+  }
 
 }
 
 bool frameWaitDurationElapsed() {
-  //cdc.print(audioSamplesInBuffer());
-  if ((int64_t(time_us_64() - framerateHelper) < (targetFrameTime - 5000))) {
+  if(live) return true;
+  if ((int64_t(micros() - framerateHelper) < (targetFrameTime - 5000))) {
     delay(1);
     yield();
     return false;
   }
-  //cdc.print(" ");
-  //cdc.println(audioSamplesInBuffer());
   if (audioSamplesInBuffer() > 1000) {
     delay(1);
     yield();
     return false;
   }
-  framerateHelper = time_us_64();
+  framerateHelper = micros();
   return  true;
 }
 
 
+#ifndef TinyTVKit
 void setup1()
 {
-
+  initializeDisplay();
 }
 
 void loop1()
 {
   core2Loop();
-  MSCloopCore1();
 }
+#endif
