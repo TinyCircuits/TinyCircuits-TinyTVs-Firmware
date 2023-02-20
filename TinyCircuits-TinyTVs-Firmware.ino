@@ -31,12 +31,6 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>  .
 */
 
-// Version sceme: major.minor.patch
-#define VERSION_MAJOR 1 // (incremented when the release contains breaking changes, all other numbers are set to 0)
-#define VERSION_MINOR 0 // (incremented when the release contains new non-breaking features, patch is set to 0)
-#define VERSION_PATCH 0 // (incremented when the release only contains bugfixes and very minor/trivial features considered necessary)
-
-
 // Select ONE from this list!
 
 #define TINYTV_2_COMPILE
@@ -73,6 +67,7 @@
 #include <JPEGDEC.h>                // minor customization
 #include "JPEGStreamer.h"
 #include "globals_and_buffers.h"    // Big fat statically-allocate-everything header
+#include "versions.h"
 #ifndef TinyTVKit
 #include "hardware/pwm.h"           // RP2040 API
 #include "pico/stdlib.h"            // RP2040 set_sys_clock_khz

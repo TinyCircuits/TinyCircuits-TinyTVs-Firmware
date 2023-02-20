@@ -10,10 +10,10 @@ See the TinyTV-Site repo for even more information and utility pages for streami
 ## Versions/Changing the code
 
 Two steps **need** to be done to release a new version of the firmware:
-1. In `TinyCircuits-TinyTVs-Firmware.ino` update the firmware version (format `major.minor.patch`) in the following defines:
-    * `#define VERSION_MAJOR` (incremented when the release contains breaking changes, all other numbers are set to 0)
-    * `#define VERSION_MINOR` (incremented when the release contains new non-breaking features, patch is set to 0)
-    * `#define VERSION_PATCH` (incremented when the release only contains bugfixes and very minor/trivial features considered necessary)
+1. In `versions.h` update the firmware version (format `major.minor.patch`) in the defines according to these rules:
+    * `major`: incremented when the release contains breaking changes, all other numbers are set to 0
+    * `minor`: incremented when the release contains new non-breaking features, patch is set to 0
+    * `patch`: incremented when the release only contains bugfixes and very minor/trivial features considered necessary
 
 The first version ever was `1.0.0`
 

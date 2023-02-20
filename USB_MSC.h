@@ -249,7 +249,15 @@ uint8_t commandCheck(uint8_t *jpegBuffer){
   }else if(jpegBuffer[5] == 'V' && jpegBuffer[6] == 'E' && jpegBuffer[7] == 'R'){
     // Allow for major.minor.patch up to [XXX.XXX.XXX]
     char version[12];
-    sprintf(version, "[%u.%u.%u]", VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+
+    #if defined(TINYTV_2_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_2_VERSION_MAJOR, TINYTV_2_VERSION_MINOR, TINYTV_2_VERSION_PATCH);
+    #elif defined(TINYTV_MINI_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_MINI_VERSION_MAJOR, TINYTV_MINI_VERSION_MINOR, TINYTV_MINI_VERSION_PATCH);
+    #elif defined(TINYTV_KIT_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_DIY_VERSION_MAJOR, TINYTV_DIY_VERSION_MINOR, TINYTV_DIY_VERSION_PATCH);
+    #endif
+
     cdc.write(version);
   }
 
