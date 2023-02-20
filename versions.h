@@ -1,4 +1,4 @@
-// Version sceme: major.minor.patch
+// Version scheme: major.minor.patch
 
 // major: incremented when the release contains breaking changes, all other numbers are set to 0
 // minor: incremented when the release contains new non-breaking features, patch is set to 0
