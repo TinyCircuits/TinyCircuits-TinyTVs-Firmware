@@ -49,7 +49,7 @@ Follow the steps here https://learn.tinycircuits.com/Processors/TinyScreen%2B_Se
 
 1. In the Arduino IDE under `Tools`, make sure to set each of the following:
     * Board: Raspberry Pi Pico
-    * CPU Speed: 200MHZ for TinyTV 2 and 50MHz for TinyTV Mini
+    * CPU Speed: 200MHz for TinyTV 2 and 50MHz for TinyTV Mini
     * Optimization: Even more (-O3)
     * USB Stack: Adafruit TinyUSB
 
