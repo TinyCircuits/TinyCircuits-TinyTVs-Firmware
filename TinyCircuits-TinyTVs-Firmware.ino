@@ -42,7 +42,6 @@
   #define TinyTVKit 1
   #define TinyTVMini 1
   #define IR_INPUT_PIN 3
-  #define Serial SerialUSB
 
 #elif defined(TINYTV_MINI_COMPILE)
 
@@ -73,6 +72,92 @@
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
 #endif
 
+
+
+
+
+
+enum COMMAND_TYPE{
+    NONE,
+    FRAME_DELIMINATOR,
+    TINYTV_TYPE
+};
+
+uint8_t commandCheck(uint8_t *jpegBuffer){
+  // "0x30 0x30 0x64 0x63" is the start of an avi frame
+  if(jpegBuffer[0] == 0x30 && jpegBuffer[1] == 0x30 && jpegBuffer[2] == 0x64 && jpegBuffer[3] == 0x63){
+    //frameDeliminatorAcquired = true;
+    return FRAME_DELIMINATOR;
+    
+  }else if(jpegBuffer[4] == 'T' && jpegBuffer[5] == 'Y' && jpegBuffer[6] == 'P' && jpegBuffer[7] == 'E'){
+    #if !defined(TinyTVKit) && !defined(TinyTVMini)
+      cdc.write("TV2");
+    #elif !defined(TinyTVKit)
+      cdc.write("TVMINI");
+    #else
+      SerialUSB.write("TVDIY");
+    #endif
+    return TINYTV_TYPE;
+  }else if(jpegBuffer[5] == 'V' && jpegBuffer[6] == 'E' && jpegBuffer[7] == 'R'){
+    // Allow for major.minor.patch up to [XXX.XXX.XXX]
+    char version[12];
+
+    #if defined(TINYTV_2_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_2_VERSION_MAJOR, TINYTV_2_VERSION_MINOR, TINYTV_2_VERSION_PATCH);
+      cdc.write(version);
+    #elif defined(TINYTV_MINI_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_MINI_VERSION_MAJOR, TINYTV_MINI_VERSION_MINOR, TINYTV_MINI_VERSION_PATCH);
+      cdc.write(version);
+    #elif defined(TINYTV_KIT_COMPILE)
+      sprintf(version, "[%u.%u.%u]", TINYTV_DIY_VERSION_MAJOR, TINYTV_DIY_VERSION_MINOR, TINYTV_DIY_VERSION_PATCH);
+      SerialUSB.write(version);
+    #endif
+  }
+
+  return NONE;
+}
+
+
+void commandSearch(uint8_t *jpegBuffer){
+  #ifdef TinyTVKit
+    while(SerialUSB.available()){
+      // Move all bytes from right (highest index) to left (lowest index) in buffer
+      jpegBuffer[0] = jpegBuffer[1];
+      jpegBuffer[1] = jpegBuffer[2];
+      jpegBuffer[2] = jpegBuffer[3];
+      jpegBuffer[3] = jpegBuffer[4];
+      jpegBuffer[4] = jpegBuffer[5];
+      jpegBuffer[5] = jpegBuffer[6];
+      jpegBuffer[6] = jpegBuffer[7];
+      jpegBuffer[7] = SerialUSB.read();
+
+      if(commandCheck(jpegBuffer) == FRAME_DELIMINATOR){
+        break;
+      }
+    }
+  #else
+    while(cdc.available()){
+      // Move all bytes from right (highest index) to left (lowest index) in buffer
+      jpegBuffer[0] = jpegBuffer[1];
+      jpegBuffer[1] = jpegBuffer[2];
+      jpegBuffer[2] = jpegBuffer[3];
+      jpegBuffer[3] = jpegBuffer[4];
+      jpegBuffer[4] = jpegBuffer[5];
+      jpegBuffer[5] = jpegBuffer[6];
+      jpegBuffer[6] = jpegBuffer[7];
+      jpegBuffer[7] = cdc.read();
+
+      if(commandCheck(jpegBuffer) == FRAME_DELIMINATOR){
+        break;
+      }
+    }
+  #endif
+}
+
+
+
+
+
 int nextVideoError = 0;
 int prevVideoError = 0;
 bool showNoVideoError = false;
@@ -88,9 +173,11 @@ void setup() {
   }
 
 #ifndef TinyTVKit // MSC time
-  Serial.end();
+  Serial.end();             // Called 'Serial' when on RP2040
   cdc.begin(0);
   USBMSCInit();
+#else
+  SerialUSB.begin(115200);  // Called 'SerialUSB' when on SAMD21
 #endif
 
   yield();
@@ -183,10 +270,11 @@ void loop() {
   }
   else
   {
-
+    
   }
+  #else
+    commandSearch(videoBuf[0]);
   #endif
-
   // Hardware encoder/button input
   updateButtonStates();
 
