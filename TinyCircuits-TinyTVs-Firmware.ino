@@ -33,9 +33,9 @@
 
 // Select ONE from this list!
 
-#define TINYTV_2_COMPILE
-//#define TINYTV_MINI_COMPILE
-//#define TINYTV_KIT_COMPILE
+// #define TINYTV_2_COMPILE
+// #define TINYTV_MINI_COMPILE
+#define TINYTV_KIT_COMPILE
 
 #ifdef TINYTV_KIT_COMPILE
 
@@ -70,7 +70,6 @@
 #include "versions.h"
 #ifndef TinyTVKit
 #include "hardware/pwm.h"           // RP2040 API
-#include "pico/stdlib.h"            // RP2040 set_sys_clock_khz
 #include "USB_MSC.h"                // Adafruit TinyUSB callbacks, and kinda hacky hathach tinyUSB start_stop_cb implementation
 #endif
 
