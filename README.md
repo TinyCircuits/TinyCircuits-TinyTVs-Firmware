@@ -15,7 +15,7 @@ Two steps **need** to be done to release a new version of the firmware:
     * `minor`: incremented when the release contains new non-breaking features, patch is set to 0
     * `patch`: incremented when the release only contains bugfixes and very minor/trivial features considered necessary
 
-The first version ever was `1.0.0`
+Read the rest of the `versions.h` file for updating the `REQUIRED` versions. The first version ever was `1.0.0`
 
 2. New binaries with the following names need to be committed at the same time with a commit message noting the version they were compiled:
     * `binaries/TinyTV-2-firmware.uf2`
@@ -35,6 +35,7 @@ Unzip and move each of the folders in `src` (called that instead of 'lib' becaus
 * `SdFat`: library for interacting with SD cards
 * `TinyScreen`: modified TinyScreen+ library to include support for TFT displays
 * `GraphicsBuffer2`: modified TinyScreen+ library for text rendering? (not 100% sure why it might be different than our `GraphicsBuffer` library)
+* `IRemote`: for handling the remote IR receiver and IR codes
 
 ### 2. Install the RP2040 Arduino board package
 
