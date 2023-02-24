@@ -34,7 +34,7 @@
 // Select ONE from this list!
 
 // #define TINYTV_2_COMPILE 1
-// #define TINYTV_MINI_COMPILE 1
+#define TINYTV_MINI_COMPILE 1
 // #define TINYTV_KIT_COMPILE 1
 
 

@@ -17,7 +17,7 @@ void JPEGBufferFilled(int);
 uint8_t commandCheck(uint8_t *jpegBuffer){
   // "0x30 0x30 0x64 0x63" is the start of an avi frame
   if(jpegBuffer[0] == 0x30 && jpegBuffer[1] == 0x30 && jpegBuffer[2] == 0x64 && jpegBuffer[3] == 0x63){
-    //frameDeliminatorAcquired = true;
+    frameDeliminatorAcquired = true;
     return FRAME_DELIMINATOR;
     
   }else if(jpegBuffer[4] == 'T' && jpegBuffer[5] == 'Y' && jpegBuffer[6] == 'P' && jpegBuffer[7] == 'E'){

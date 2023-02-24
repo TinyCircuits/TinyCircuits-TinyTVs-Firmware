@@ -43,8 +43,7 @@ void JPEGStreamer::decode(uint8_t *jpegBuffer, const uint16_t &jpegBufferReadCou
     dbgPrint(String(jpeg->getLastError()));
     dbgPrint("See https://github.com/bitbank2/JPEGDEC/blob/master/src/JPEGDEC.h#L83");
   }
-  if(IMG_W != jpeg->getWidth() || IMG_H != jpeg->getHeight())
-  {
+  if(IMG_W != jpeg->getWidth() || IMG_H != jpeg->getHeight()){
     //display.clearScreen();
     IMG_XOFF = (HW_VIDEO_W-jpeg->getWidth())/2;
     IMG_YOFF = (HW_VIDEO_H-jpeg->getHeight())/2;
