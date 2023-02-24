@@ -124,6 +124,7 @@ bool settingsNeedSaved = false;
 bool reloadVideoList = false;
 
 bool live = false;
+uint8_t commandSearchBuffer[8]; // Needs enough room to at max fit AAAABBBB (A=AVI frame bytes, B=Number of bytes in frame)
 
 int channelNumber = 0; //expects a 'nextVideo' call at startup
 int showChannelTimer = 0;

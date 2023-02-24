@@ -162,6 +162,8 @@ bool USBMSCJustStopped() {
 }
 bool handleUSBMSC(bool stopMSC) {
   if (mscActive) {
+    commandSearch();
+
     if (count < 100 && !stopMSC && !ejected) {
       if ((millis() - timer > 1000) && !tud_ready() ) {
         count++;
@@ -192,31 +194,4 @@ bool handleUSBMSC(bool stopMSC) {
     ended = true;
   }
   return false;
-}
-
-
-void MSCloopCore1() {
-  if (secondCoreSD && !ejected ) {
-    if (lbaToReadCount) {
-      sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, 1);
-      lbaToReadPos += 512;
-      lbaToRead += 1;
-      lbaToReadCount -= 1;
-      //read first block, then remainder
-      if (lbaToReadCount) {
-        sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, lbaToReadCount);
-      }
-      lbaToReadCount = 0;
-    }
-    if (lbaToWriteCount) {
-      sd.card()->writeSectors(lbaToWrite, (uint8_t*)lbaWriteBuff + lbaToWritePos, lbaToWriteCount);
-      lbaToWriteCount = 0;
-    }
-    if (fs_flushed) {
-      sd.card()->syncDevice();
-      //sd.cacheClear();
-      while(sd.card()->isBusy()) {}
-      fs_flushed = false;
-    }
-  }
 }

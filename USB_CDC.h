@@ -14,13 +14,13 @@ uint16_t liveTimeoutLimitms = 750;
 void JPEGBufferFilled(int);
 
 
-uint8_t commandCheck(uint8_t *jpegBuffer){
+uint8_t commandCheck(){
   // "0x30 0x30 0x64 0x63" is the start of an avi frame
-  if(jpegBuffer[0] == 0x30 && jpegBuffer[1] == 0x30 && jpegBuffer[2] == 0x64 && jpegBuffer[3] == 0x63){
+  if(commandSearchBuffer[0] == 0x30 && commandSearchBuffer[1] == 0x30 && commandSearchBuffer[2] == 0x64 && commandSearchBuffer[3] == 0x63){
     frameDeliminatorAcquired = true;
     return FRAME_DELIMINATOR;
     
-  }else if(jpegBuffer[4] == 'T' && jpegBuffer[5] == 'Y' && jpegBuffer[6] == 'P' && jpegBuffer[7] == 'E'){
+  }else if(commandSearchBuffer[4] == 'T' && commandSearchBuffer[5] == 'Y' && commandSearchBuffer[6] == 'P' && commandSearchBuffer[7] == 'E'){
     #if !defined(TinyTVKit) && !defined(TinyTVMini)
       cdc.write("TV2");
     #elif !defined(TinyTVKit)
@@ -29,7 +29,7 @@ uint8_t commandCheck(uint8_t *jpegBuffer){
       SerialUSB.write("TVDIY");
     #endif
     return TINYTV_TYPE;
-  }else if(jpegBuffer[5] == 'V' && jpegBuffer[6] == 'E' && jpegBuffer[7] == 'R'){
+  }else if(commandSearchBuffer[5] == 'V' && commandSearchBuffer[6] == 'E' && commandSearchBuffer[7] == 'R'){
     // Allow for major.minor.patch up to [XXX.XXX.XXX]
     char version[12];
     sprintf(version, "[%u.%u.%u]", MAJOR, MINOR, PATCH);
@@ -45,36 +45,36 @@ uint8_t commandCheck(uint8_t *jpegBuffer){
 }
 
 
-void commandSearch(uint8_t *jpegBuffer){
+void commandSearch(){
   #ifdef TinyTVKit
     while(SerialUSB.available()){
       // Move all bytes from right (highest index) to left (lowest index) in buffer
-      jpegBuffer[0] = jpegBuffer[1];
-      jpegBuffer[1] = jpegBuffer[2];
-      jpegBuffer[2] = jpegBuffer[3];
-      jpegBuffer[3] = jpegBuffer[4];
-      jpegBuffer[4] = jpegBuffer[5];
-      jpegBuffer[5] = jpegBuffer[6];
-      jpegBuffer[6] = jpegBuffer[7];
-      jpegBuffer[7] = SerialUSB.read();
+      commandSearchBuffer[0] = commandSearchBuffer[1];
+      commandSearchBuffer[1] = commandSearchBuffer[2];
+      commandSearchBuffer[2] = commandSearchBuffer[3];
+      commandSearchBuffer[3] = commandSearchBuffer[4];
+      commandSearchBuffer[4] = commandSearchBuffer[5];
+      commandSearchBuffer[5] = commandSearchBuffer[6];
+      commandSearchBuffer[6] = commandSearchBuffer[7];
+      commandSearchBuffer[7] = SerialUSB.read();
 
-      if(commandCheck(jpegBuffer) == FRAME_DELIMINATOR){
+      if(commandCheck() == FRAME_DELIMINATOR){
         break;
       }
     }
   #else
     while(cdc.available()){
       // Move all bytes from right (highest index) to left (lowest index) in buffer
-      jpegBuffer[0] = jpegBuffer[1];
-      jpegBuffer[1] = jpegBuffer[2];
-      jpegBuffer[2] = jpegBuffer[3];
-      jpegBuffer[3] = jpegBuffer[4];
-      jpegBuffer[4] = jpegBuffer[5];
-      jpegBuffer[5] = jpegBuffer[6];
-      jpegBuffer[6] = jpegBuffer[7];
-      jpegBuffer[7] = cdc.read();
+      commandSearchBuffer[0] = commandSearchBuffer[1];
+      commandSearchBuffer[1] = commandSearchBuffer[2];
+      commandSearchBuffer[2] = commandSearchBuffer[3];
+      commandSearchBuffer[3] = commandSearchBuffer[4];
+      commandSearchBuffer[4] = commandSearchBuffer[5];
+      commandSearchBuffer[5] = commandSearchBuffer[6];
+      commandSearchBuffer[6] = commandSearchBuffer[7];
+      commandSearchBuffer[7] = cdc.read();
 
-      if(commandCheck(jpegBuffer) == FRAME_DELIMINATOR){
+      if(commandCheck() == FRAME_DELIMINATOR){
         break;
       }
     }
@@ -91,7 +91,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
       live = true;
       //return fillBuffer(jpegBuffer, jpegBufferSize, jpegBufferReadCount);
       if(frameSize == 0){
-        frameSize = (((uint16_t)jpegBuffer[7]) << 24) | (((uint16_t)jpegBuffer[6]) << 16) | (((uint16_t)jpegBuffer[5]) << 8) | ((uint16_t)jpegBuffer[4]);
+        frameSize = (((uint16_t)commandSearchBuffer[7]) << 24) | (((uint16_t)commandSearchBuffer[6]) << 16) | (((uint16_t)commandSearchBuffer[5]) << 8) | ((uint16_t)commandSearchBuffer[4]);
 
         if(frameSize >= jpegBufferSize){
           frameSize = 0;
@@ -133,7 +133,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint
       return false;
     }else{
       // Search for deliminator to get back to filling buffers or respond to commands
-      commandSearch(jpegBuffer);
+      commandSearch();
     }
   }else if(millis() - liveTimeoutStart >= liveTimeoutLimitms){
     // A timeout is a time to reset states of both jpeg buffers, reset everything
