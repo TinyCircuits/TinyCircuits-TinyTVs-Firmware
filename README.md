@@ -24,7 +24,7 @@ Read the rest of the `versions.h` file for updating the `REQUIRED` versions. The
 
 The names need to remain the same for the `TinyTV-Site` update page to find them. Make sure the UF2s are placed in this repository's `binaries` folder.
 
-## Compiling
+## Compiling: Arduino IDE
 
 Follow the below steps to build a firmware image using the Arduino IDE.
 
@@ -80,3 +80,22 @@ Define either
 * `#define TINYTV_KIT_COMPILE`
 
 Now you can press the upload button (after choosing a port and/or putting the device into bootloader mode) or use `Sketch -> Export compiled Binary`.
+
+## Compiling: Arduino CLI
+
+Follow the below steps to automatically build firmware images with the `arduino-cli` tool
+
+1. Download and install the latest `arduino-cli` from `https://arduino.github.io/arduino-cli/0.31/installation/#download` (make sure its installation directory is added to the `PATH` environment variable)
+2. Clone this directory and open a terminal in it
+3. If not already downloaded and modified according to the previous `step 4` (ignoring IDE configuration), install the board packages for TinyTV 2, Mini, and DIY
+    * 2 & Mini: `arduino-cli core install rp2040:rp2040@2.6.0 --config-file "cli\arduino-cli.yaml" `
+    * DIY: `arduino-cli core install tinycircuits:samd --config-file "cli\arduino-cli.yaml"`
+4. Go through the non IDE steps of the previous section "Compiling for each platform (TinyTV 2, TinyTV Mini, or TinyTV DIY Kit)"
+5. Issue the compile command for each platform
+    * Compile binary for TinyTV 2 : `arduino-cli compile --verbose --fqbn rp2040:rp2040:rpipico:flash=2097152_0,freq=200,opt=Optimize3,usbstack=tinyusb TinyCircuits-TinyTVs-Firmware.ino --config-file "cli\arduino-cli.yaml" --output-dir "binaries" --build-property build.project_name="TinyTV-2-firmware" --build-property build.extra_flags=-DTINYTV_2_COMPILE=1`
+    * Compile binary for TinyTV Mini : `arduino-cli compile --verbose --fqbn rp2040:rp2040:rpipico:flash=2097152_0,freq=50,opt=Optimize3,usbstack=tinyusb TinyCircuits-TinyTVs-Firmware.ino --config-file "cli\arduino-cli.yaml" --output-dir "binaries" --build-property build.project_name="TinyTV-Mini-firmware" --build-property build.extra_flags=-DTINYTV_MINI_COMPILE=1`
+    * Compile binary for TinyTV DIY (does not work for some reason): `arduino-cli compile --verbose --fqbn TinyCircuits:samd:tinyscreen:BuildOption=normal TinyCircuits-TinyTVs-Firmware.ino --config-file "cli\arduino-cli.yaml" --output-dir "binaries" --build-property build.project_name="TinyTV-DIY-firmware" --build-property build.extra_flags=-DTINYTV_KIT_COMPILE=1`
+
+## Disclaimer about contributions
+
+Although we greatly appreciate feedback and contributions to our products code, as a business it takes time to integrate, test, and deploy new versions of firmware. As is typical with software, there is an inherent risk of additional bugs and breakages upon release of new firmware, therefore, only contributions to this codebase that greatly improve the product and its functionally can be considered.

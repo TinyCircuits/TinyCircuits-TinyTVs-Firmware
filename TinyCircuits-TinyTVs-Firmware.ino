@@ -33,9 +33,17 @@
 
 // Select ONE from this list!
 
-// #define TINYTV_2_COMPILE
-// #define TINYTV_MINI_COMPILE
-#define TINYTV_KIT_COMPILE
+// #define TINYTV_2_COMPILE 1
+// #define TINYTV_MINI_COMPILE 1
+// #define TINYTV_KIT_COMPILE 1
+
+
+#if TINYTV_2_COMPILE + TINYTV_MINI_COMPILE + TINYTV_KIT_COMPILE > 1
+  #error "Too many compile flags defined. Only define one. If using arduino-cli, comment out all defines and pass parameter, or don't pass parameter and uncomment one define"
+#elif TINYTV_2_COMPILE + TINYTV_MINI_COMPILE + TINYTV_KIT_COMPILE == 0
+  #error "No compile flags set, please uncomment one of the above defines or pass a parameter through the `arduino-cli`"
+#endif
+
 
 #ifdef TINYTV_KIT_COMPILE
 
