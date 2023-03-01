@@ -395,6 +395,7 @@ void JPEGBufferDecoded() {
   display.setY(VIDEO_Y+IMG_YOFF, VIDEO_Y+IMG_YOFF+IMG_H-1);
   display.endTransfer();
   display.startData();
+  cropCorners(frameBuf, VIDEO_W, VIDEO_H);
   display.writeBufferDMA((uint8_t*)frameBuf, IMG_W*IMG_H*2);
   if(staticTimer > 0) staticTimer--;
   decoderDataLength[currentDecodeBuf] = 0;
@@ -477,7 +478,40 @@ void displayUSBMSCmessage() {
   writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
 }
 
+void calculateCornerCropLimits(){
+  // Starting from top-left move down and right each time until reach inside of circle, that's the limit
+  for (uint8_t y=0; y<CROP_RADIUS; y++){
+    uint8_t x = 0;
+    while (x < CROP_RADIUS+1){
+      if (sqrt(pow(x - CROP_RADIUS, 2) + pow(y - CROP_RADIUS, 2)) <= CROP_RADIUS){
+        cropRadiusLimits[y] = x;
+        break;
+      }
+      x++;
+    }
+  }
+}
+
+void cropCorners(uint16_t *screenBuffer, uint8_t width, uint8_t height){
+  for(uint8_t y=0; y<CROP_RADIUS; y++){
+    for(uint8_t x=0; x<cropRadiusLimits[y]; x++){
+      uint16_t topLeftBufferIndex = y * width + x;
+      uint16_t topRightBufferIndex = y * width + ((width-1) - x);
+
+      uint16_t bottomLeftBufferIndex = ((height-1) - y) * width + x;
+      uint16_t bottomRightBufferIndex = ((height-1) - y) * width + ((width-1) - x);
+
+      screenBuffer[topLeftBufferIndex] = 0;
+      screenBuffer[topRightBufferIndex] = 0;
+      screenBuffer[bottomLeftBufferIndex] = 0;
+      screenBuffer[bottomRightBufferIndex] = 0;
+    }
+  }
+}
+
 #endif
+
+
 
 // These functions are similar across all platforms
 
@@ -501,6 +535,7 @@ void initializeDisplay() {
   }
   screenBuffer.setFont(thinPixel7_10ptFontInfo);
 #ifndef TinyTVKit
+  calculateCornerCropLimits();
 #ifdef TinyTVMini
   digitalWrite(9, HIGH);
 #else

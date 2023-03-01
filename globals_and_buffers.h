@@ -69,6 +69,7 @@ const int VIDEO_W = 64;
 const int VIDEO_H = 64;
 const int BUF_H = 64;
 uint16_t frameBuf[VIDEO_W*VIDEO_H];
+#define CROP_RADIUS 8
 #else
 const int VIDEO_X = 24;
 const int VIDEO_Y = 0;
@@ -76,6 +77,7 @@ const int VIDEO_W = 216;
 const int VIDEO_H = 135;
 const int BUF_H = 135;
 uint16_t frameBuf[VIDEO_W*VIDEO_H];
+#define CROP_RADIUS 25
 #endif
 
 #include "JPEGStreamer.h"
@@ -89,6 +91,11 @@ const int VIDEOBUF_SIZE = 1024 * 20;
 const int VIDEOBUF_CNT = 2;
 #endif
 uint8_t videoBuf[VIDEOBUF_CNT][VIDEOBUF_SIZE];
+
+// Only TV2 and Mini get cropped corners
+#ifndef TinyTVKit
+uint8_t cropRadiusLimits[CROP_RADIUS];
+#endif
 
 volatile bool frameReady[2] = {false, false};
 volatile bool frameDecoded[2] = {true, true};
