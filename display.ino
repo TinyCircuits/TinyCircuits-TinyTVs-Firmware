@@ -498,8 +498,8 @@ void cropCorners(uint16_t *screenBuffer, uint8_t width, uint8_t height){
       uint16_t topLeftBufferIndex = y * width + x;
       uint16_t topRightBufferIndex = y * width + ((width-1) - x);
 
-      uint16_t bottomLeftBufferIndex = ((height-1) - y) * width + x;
-      uint16_t bottomRightBufferIndex = ((height-1) - y) * width + ((width-1) - x);
+      uint16_t bottomLeftBufferIndex = ((height-2) - y) * width + x;
+      uint16_t bottomRightBufferIndex = ((height-2) - y) * width + ((width-1) - x);
 
       screenBuffer[topLeftBufferIndex] = 0;
       screenBuffer[topRightBufferIndex] = 0;
