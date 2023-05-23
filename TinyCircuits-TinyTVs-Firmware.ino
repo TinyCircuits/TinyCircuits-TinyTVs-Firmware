@@ -33,9 +33,9 @@
 
 // Select ONE from this list!
 
-#define TINYTV_2_COMPILE 1
-// #define TINYTV_MINI_COMPILE 1
-// #define TINYTV_KIT_COMPILE 1
+// #define TINYTV_2_COMPILE 1
+ #define TINYTV_MINI_COMPILE 1
+//#define TINYTV_KIT_COMPILE 1
 
 
 #if TINYTV_2_COMPILE + TINYTV_MINI_COMPILE + TINYTV_KIT_COMPILE > 1

@@ -529,6 +529,9 @@ void initializeDisplay() {
   display.setFont(thinPixel7_10ptFontInfo);
   display.initDMA();
 
+  display.drawLine(0, 0, 96, 65, 255, 0, 0);
+  delay(5000);
+
 
   if (screenBuffer.begin()) {
     dbgPrint("malloc error");
