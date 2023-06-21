@@ -3,7 +3,7 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
-//  
+//
 //  02/08/2023 Cross-platform base committed
 //
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
@@ -30,21 +30,14 @@
 //    ffmpeg -i "videofile.mp4" -r 24 -vf "scale=216:135,hqdn3d" -b:v 1500k -maxrate 1500k -bufsize 64k -c:v mjpeg -acodec pcm_u8 -ar 10000 -ac 1 in.avi
 
 
-char aviList[10][20] = {"\0"};
+const int maxVideos = MAX_VIDEO_FILES;
+char aviList[maxVideos][13] = {"\0"};
 int aviCount = 0;
 uint32_t livePos;
 uint8_t nextChunkTag[8];
 bool videoStreamReady = false;
-
-void saveSettings()
-{
-//  uint8_t tempBuff[500];
-//  File32 settingsFile;
-//  settingsFile.open("settings.txt", O_WRITE | O_CREAT);
-//  sprintf((char*)tempBuff, "Volume: %hi\n\rStatic vfx/sfx: %hhi\n\rPlayback mode: %hhi\n\rShow timestamp: %hhi\n\rDisplay channel #: %hhi\n\rAlphabetize playback: %hhi", soundVolume, doStaticEffects, autoplayMode, timeStamp, showChannelNumber, alphabetizedPlaylist);
-//  settingsFile.write((const char*)tempBuff);
-//  settingsFile.close();
-}
+uint64_t tsMillisInitial = 0;
+uint32_t currentAudioRate = 0;
 
 uint32_t getInt(uint8_t * intOffset) {
   return (uint32_t(intOffset[3]) << 24) | (uint32_t(intOffset[2]) << 16) | (uint32_t(intOffset[1]) << 8) | (uint32_t(intOffset[0]));
@@ -97,11 +90,12 @@ int nextChunkLength() {
   return getInt(nextChunkTag + 4);
 }
 
-int getVideoInfo() {
+int getVideoInfo(int startTimeOffsetS) {
   int chunkCount = 0;
   uint8_t chunkHeader[12];
-  uint32_t audioRate = 0;
+  currentAudioRate = 0;
   uint32_t frameRate = 0;
+  uint32_t totalFrames = 0;
   bool isMJPG = false;
   while (chunkCount < 50) {
     //Read the next chunk/list header
@@ -131,36 +125,103 @@ int getVideoInfo() {
         {
           return 1;
         }
-        audioRate = getInt(chunkHeader);
+        currentAudioRate = getInt(chunkHeader);
+        if (currentAudioRate) {
+          //samplesPerFrame =  audioRate / (1000000 / targetFrameTime) + 1;
+          dbgPrint("Set audio rate to " + String(currentAudioRate));
+        }
         skipBytes -= 24;
       }
       if (strncmp((char *)chunkHeader + 8, "vids", 4) == 0) {
         // Found the video stream header
         dbgPrint("Found video stream info");
-        uint8_t chunkData[24];
-        if (infile.read(chunkData, 24) != 24)
-        {
+        uint8_t chunkData[32];
+        if (infile.read(chunkData, 32) != 32) {
           return 1;
         }
         if (strncmp((char *)chunkData, "MJPG", 4) == 0) {
           isMJPG = true;
         }
         frameRate = getInt(chunkData + 20);
-        skipBytes -= 24;
+        totalFrames = getInt(chunkData + 28);
+        skipBytes -= 32;
       }
     }
 
     if (strncmp((char *)chunkHeader + 8, "movi", 4) == 0) {
-      // Start loading AV data
       dbgPrint("Found movi list, ready to stream?");
+      skipBytes = getInt(chunkHeader + 4);
+      dbgPrint(String(skipBytes));
+      int moviListStart = infile.curPosition();// + 8;
+      int moviListOffset = 0;
+      int timer = millis();
+      if (startTimeOffsetS > 0) {
+        infile.seekCur(skipBytes - 4);
+        if (infile.read(chunkHeader, 8) != 8) {
+          return 1;
+        }
+        if (strncmp((char *)chunkHeader, "idx1", 4) == 0) {
+          skipBytes = getInt(chunkHeader + 4);
+          dbgPrint("Found idx1, size: " + String(skipBytes));
+          int framesToSkip = startTimeOffsetS * frameRate;
+          framesToSkip = framesToSkip % totalFrames;
+          uint8_t *tempBuf = sharedBuffer;
+          int bufPos = 0;
+
+          //Takes too long to actually read the whole index table, see how many KB can be skipped
+          int framesPerKB = 0;
+          if (infile.read(tempBuf, 1024) != 1024) {
+            return 1;
+          }
+          while (bufPos < 1024) {
+            if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
+              framesPerKB++;
+            }
+            bufPos += 16;
+          }
+          framesToSkip -= framesPerKB;
+          int KBtoSkip = framesToSkip / framesPerKB;
+          //need to test this..
+          //          while (KBtoSkip * 1024 > skipBytes - 1024) {
+          //            KBtoSKip--;
+          //          }
+          dbgPrint(String(framesPerKB));
+          dbgPrint(String(KBtoSkip));
+          infile.seekCur(KBtoSkip * 1024);
+          framesToSkip -= (KBtoSkip * framesPerKB);
+          if (framesToSkip < 1)framesToSkip = 1;
+
+          //continue with 'exact' frame counting
+          while (framesToSkip) {
+            bufPos = 0;
+            int bytesRead = infile.read(tempBuf, 512);
+            if (bytesRead != 512) {
+              dbgPrint("error reading idx1");
+              //don't error out, just use last found moviListOffset?
+              //return 1;
+              framesToSkip = 0;
+            }
+            while (framesToSkip && bufPos < bytesRead) {
+              if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
+                framesToSkip--;
+                moviListOffset = getInt(tempBuf + bufPos + 8);
+              }
+              bufPos += 16;
+            }
+            dbgPrint(String(framesToSkip));
+          }
+
+          dbgPrint("skip time " + String(millis() - timer));
+          moviListOffset -= 4; //moviListStart already has first tag
+        } else {
+          dbgPrint("idx1 not at expected position");
+        }
+        infile.seekSet(moviListStart + moviListOffset);
+      }
+
       if (isMJPG && frameRate) {
         targetFrameTime = 1000000 / frameRate;
         dbgPrint("Set target frametime to " + String((uint32_t)targetFrameTime));
-        if (audioRate) {
-          //samplesPerFrame =  audioRate / (1000000 / targetFrameTime) + 1;
-          dbgPrint("Set audio rate to " + String(audioRate));
-          setAudioSampleRate(audioRate);
-        }
         if (infile.read(nextChunkTag, 8) != 8)
         {
           return 1;
@@ -182,13 +243,19 @@ bool isAVIStreamAvailable() {
   return videoStreamReady;
 }
 
-int startVideo(const char* n) {
+int getVideoAudioRate() {
+  return currentAudioRate;
+}
+
+int startVideo(const char* n, int startTimeS) {
   videoStreamReady = false;
   if (n[0] != 0) {
     // Open the video file or the next one if we can't
     infile.close();
     if (!infile.open(n, O_RDONLY)) {
       dbgPrint("Video open error");
+      sd.card()->syncDevice();
+      sd.cacheClear();
       return 1;
     }
   }
@@ -203,7 +270,7 @@ int startVideo(const char* n) {
     dbgPrint("Infile is not a RIFF AVI file");
     return 2;
   }
-  if (getVideoInfo()) {
+  if (getVideoInfo(startTimeS)) {
     dbgPrint("Error finding stream info or read error");
     return 3;
   }
@@ -213,32 +280,43 @@ int startVideo(const char* n) {
 
 
 char * getCurrentFilename() {
-  return aviList[channelNumber - 1];
+  return aviList[channelNumber];
 }
 
+int startVideoByChannel(int channelNum) {
+  int newVideoIndex = channelNum;
+  if (newVideoIndex >= aviCount) {
+    newVideoIndex = aviCount - 1;
+  }
 
+  dbgPrint("Playing " + String(aviList[newVideoIndex]) + " Channel # is " + String(newVideoIndex));
+
+  channelNumber = newVideoIndex;
+
+  if (startVideo(aviList[newVideoIndex], liveMode ? millis() / 1000 : 0)) {
+    return 1;
+  }
+  return 0;
+}
 
 int prevVideo() {
-  int currentVideo = channelNumber - 1;
+  int currentVideo = channelNumber;
   currentVideo--;
   if (currentVideo < 0) {
     currentVideo = aviCount - 1;
   }
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
-  channelNumber = currentVideo + 1;
-  paused = false;
-  showChannelTimer = 120;
-  playWhiteNoise = false;
+  channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo])) {
+  if (startVideo(aviList[currentVideo], liveMode ? millis() / 1000 : 0)) {
     return 1;
   }
   return 0;
 }
 
 int nextVideo() {
-  int currentVideo = channelNumber - 1;
+  int currentVideo = channelNumber ;
   currentVideo++;
   if (currentVideo >= aviCount) {
     currentVideo = 0;
@@ -246,29 +324,12 @@ int nextVideo() {
 
   dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
 
-  channelNumber = currentVideo + 1;
-  paused = false;
-  showChannelTimer = 120;
-  playWhiteNoise = false;
+  channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo])) {
+  if (startVideo(aviList[currentVideo], liveMode ? millis() / 1000 : 0)) {
     return 1;
   }
   return 0;
-}
-
-void loadSettings() {
-  // Load the user settings from settings.txt
-  File32 settingsFile;
-  if (!settingsFile.open("settings.txt", O_READ)) {
-    settingsFile.close();
-    saveSettings();
-  } else {
-    uint8_t tempBuff[500];
-    settingsFile.read(tempBuff, sizeof(tempBuff));
-    sscanf((const char*)tempBuff, "Volume: %hi\n\rStatic vfx/sfx: %hhi\n\rPlayback mode: %hhi\n\rShow timestamp: %hhi\n\rDisplay channel #: %hhi\n\rAlphabetize playback: %hhi", &soundVolume, &doStaticEffects, &autoplayMode, &timeStamp, &showChannelNumber, &alphabetizedPlaylist);
-    settingsFile.close();
-  }
 }
 
 int cmpstr(void const *a, void const *b) {
@@ -277,13 +338,16 @@ int cmpstr(void const *a, void const *b) {
 
   return strcasecmp(aa, bb);
 }
-
+//#define cdc SerialUSB
 int loadVideoList() {
-  #ifndef TinyTVKit
-  sd.vol()->ls(&cdc);
-  #else
-  sd.vol()->ls(&Serial);  
-  #endif
+  //delay(5000);
+  char * temporaryFileNameList = (char *)sharedBuffer; //use video and audio buffers to alphabetize filenames
+  int tempFileNameLength = 51;
+#ifndef TinyTVKit
+  //sd.vol()->ls(&);
+#else
+  //sd.vol()->ls(&Serial);
+#endif
   infile.close();
   File32 rootDir;
   if (!rootDir.openRoot(sd.vol())) {
@@ -291,38 +355,51 @@ int loadVideoList() {
   }
   char fileName[100];
   aviCount = 0;
-  while (infile.openNext(&rootDir, O_RDONLY)) {
+  while (infile.openNext(&rootDir, O_RDONLY) && aviCount < maxVideos) {
     memset(fileName, 0, 100);
+    infile.getSFN(fileName, 100);
     infile.getName(fileName, 100);
     if (fileName[0] != '.') {
       if (!strcmp(fileName + strlen(fileName) - 4, ".avi")) {
-        strcpy(aviList[aviCount], fileName);
+        //strcpy(aviList[aviCount], fileName);
+        strcpy(temporaryFileNameList + (aviCount * tempFileNameLength), fileName);
         aviCount++;
-      }
-      else
-      {
-        dbgPrint("Found non-AVI file, skipping");
+      } else {
+        //dbgPrint("Found non-AVI file, skipping");
       }
     }
     int e =  rootDir.getError();
-    if(e)
-    {
-      dbgPrint("Directory error "+String(e));
+    if (e) {
+      dbgPrint("Directory error " + String(e));
       break;
     }
     infile.close();
   }
-  int count = aviCount;
+  dbgPrint("");
+  for (int i = 0; i < aviCount; i++) {
+    //dbgPrint(aviList[i]);
+    dbgPrint(temporaryFileNameList + (i * tempFileNameLength));
+  }
+  dbgPrint("");
+  if (alphabetizedPlaylist) {
+    qsort(temporaryFileNameList, aviCount, tempFileNameLength, cmpstr);
+    for (int i = 0; i < aviCount; i++) {
+      //dbgPrint(aviList[i]);
+      dbgPrint(temporaryFileNameList + (i * tempFileNameLength));
+    }
+    dbgPrint("");
+  }
+  rootDir.close();
+  for (int i = 0; i < aviCount; i++) {
+    if (infile.open(temporaryFileNameList + (i * tempFileNameLength), O_RDONLY)) {
+      infile.getSFN(aviList[i], 13);
+    }
+    infile.close();
+  }
+  dbgPrint("");
   for (int i = 0; i < aviCount; i++) {
     dbgPrint(aviList[i]);
   }
-
-  if (alphabetizedPlaylist) {
-    qsort(aviList, aviCount, sizeof(aviList[0]), cmpstr);
-    for (int i = 0; i < aviCount; i++) {
-      dbgPrint(aviList[i]);
-    }
-  }
-  rootDir.close();
-  return count;
+  dbgPrint("");
+  return aviCount;
 }

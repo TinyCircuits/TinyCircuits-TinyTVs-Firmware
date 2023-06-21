@@ -1,5 +1,5 @@
 //-------------------------------------------------------------------------------
-//  TinyCircuits RP2040TV Video Player, JPEG Streaming and Decode Component
+//  TinyCircuits RP2040TV Video Player, Hardware Initialization Component
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
@@ -23,23 +23,25 @@
     the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
 */
 
-#ifndef JPEG_STREAMER_H
-#define JPEG_STREAMER_H
 
-#include <JPEGDEC.h>
-#include <stdlib.h>
-#include <TinyScreen.h>
 
-class JPEGStreamer{
-  public:
-    JPEGStreamer(JPEGDEC *_jpeg);
+typedef struct inputFlagStruct{
+  bool channelUp = false;
+  bool channelDown = false;
+  bool volUp = false;
+  bool volDown = false;
+  bool mute = false;
+  bool power = false;
+  bool channelSet = false;
+  bool volumeSet = false;
+  bool settingsChanged = false;
+}inputFlagStruct;
 
-    //void decode(uint8_t *jpegBuffer0, uint8_t *jpegBuffer1, uint16_t *screenBuffer, JPEG_DRAW_CALLBACK *pfnDraw);  // Pass JPEGDec callback function (No longer necessary, one JPEG buffer)
-    void decode(uint8_t *jpegBuffer, const uint16_t &jpegBufferReadCount, JPEG_DRAW_CALLBACK *pfnDraw);   // Pass JPEGDec callback function
 
-  private:
+// PLAYBACK PARAMETERS
+uint64_t targetFrameTime;
 
-    JPEGDEC *jpeg;
-};
 
-#endif
+int volumeSetting = 3;
+
+inputFlagStruct inputFlags;

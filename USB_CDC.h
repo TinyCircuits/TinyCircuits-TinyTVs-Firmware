@@ -1,150 +1,188 @@
-enum COMMAND_TYPE{
-    NONE,
-    FRAME_DELIMINATOR,
-    TINYTV_TYPE
-};
 
 
-static uint16_t readCount;
+
+uint16_t jpegBufferReadCount = 0;
 uint32_t frameSize = 0;
+uint32_t tempFrameSize = 0;
 bool frameDeliminatorAcquired = false;
 uint32_t liveTimeoutStart = 0;
 uint16_t liveTimeoutLimitms = 750;
+char commandBuffer[30];
+uint8_t commandBufPos = 0;
+uint32_t commandStartMS = 0;
+uint32_t commandStartTimeoutMS = 20;
 
-void JPEGBufferFilled(int);
 
 
-uint8_t commandCheck(){
-  // "0x30 0x30 0x64 0x63" is the start of an avi frame
-  if(commandSearchBuffer[0] == 0x30 && commandSearchBuffer[1] == 0x30 && commandSearchBuffer[2] == 0x64 && commandSearchBuffer[3] == 0x63){
-    frameDeliminatorAcquired = true;
-    return FRAME_DELIMINATOR;
-    
-  }else if(commandSearchBuffer[4] == 'T' && commandSearchBuffer[5] == 'Y' && commandSearchBuffer[6] == 'P' && commandSearchBuffer[7] == 'E'){
-    #if !defined(TinyTVKit) && !defined(TinyTVMini)
-      cdc.write("TV2");
-    #elif !defined(TinyTVKit)
-      cdc.write("TVMINI");
-    #else
-      SerialUSB.write("TVDIY");
-    #endif
-    return TINYTV_TYPE;
-  }else if(commandSearchBuffer[5] == 'V' && commandSearchBuffer[6] == 'E' && commandSearchBuffer[7] == 'R'){
-    // Allow for major.minor.patch up to [XXX.XXX.XXX]
-    char version[12];
-    sprintf(version, "[%u.%u.%u]", MAJOR, MINOR, PATCH);
+#ifdef ARDUINO_ARCH_RP2040
+#define SerialInterface cdc
+#else
+#define SerialInterface SerialUSB
+#endif
 
-    #if defined(TINYTV_2_COMPILE) || defined(TINYTV_MINI_COMPILE)
-      cdc.write(version);
-    #elif defined(TINYTV_KIT_COMPILE)
-      SerialUSB.write(version);
-    #endif
+//
+//{"asdf":"jkl"}
+//{"SET":"channel=2"}
+//{"SET":"volume=1"}
+//{"GET":"channel"}
+//{"FRAME":5000}
+//{"SET":"alphabetize=true"}
+//{"GET":"alphabetize"}
+//#define cdc SerialUSB
+
+bool setKeyValue(String);
+String getKeyValue(String);
+
+void handleCDCcommand(String input) {
+  if ( input.length() > 5 && input.indexOf(":") >= 0) {
+    String key = input.substring(0, input.indexOf(":"));
+    String val = input.substring(input.indexOf(":") + 1);
+    key.trim();
+    val.trim();
+    while (key.indexOf("\"") >= 0) {
+      key.remove(key.indexOf("\""), 1);
+    }
+    while (val.indexOf("\"") >= 0) {
+      val.remove(val.indexOf("\""), 1);
+    }
+    //    cdc.print("key = ");
+    //    cdc.print(key);
+    //    cdc.print(", val = ");
+    //    cdc.println(val);
+    if (key == String("FRAME")) {
+      //#ifdef ARDUINO_ARCH_RP2040
+
+
+
+      frameDeliminatorAcquired = true;
+      frameSize = val.toInt();
+
+
+
+
+
+
+
+
+      //#endif
+    } else if (key == String("GET")) {
+      //cdc.println( String("{\"") + val + String("\":\"") + getKeyValue(val) + String("\"}"));
+      SerialInterface.println( String("{\"") + val + String("\":") + getKeyValue(val) + String("}"));
+      //cdc.print(val);
+      //cdc.print(":");
+      //cdc.println(getKeyValue(val));
+    } else if (key == String("SET")) {
+      if (setKeyValue(val)) {
+        inputFlags.settingsChanged = true;//.saveSettings();
+      }
+    } else {
+      SerialInterface.println("Unhandled JSON key");
+    }
+  } else {
+    SerialInterface.print("Invalid JSON? ");
+    SerialInterface.println(input);
   }
-
-  return NONE;
 }
 
 
-void commandSearch(){
-  #ifdef TinyTVKit
-    while(SerialUSB.available()){
-      // Move all bytes from right (highest index) to left (lowest index) in buffer
-      commandSearchBuffer[0] = commandSearchBuffer[1];
-      commandSearchBuffer[1] = commandSearchBuffer[2];
-      commandSearchBuffer[2] = commandSearchBuffer[3];
-      commandSearchBuffer[3] = commandSearchBuffer[4];
-      commandSearchBuffer[4] = commandSearchBuffer[5];
-      commandSearchBuffer[5] = commandSearchBuffer[6];
-      commandSearchBuffer[6] = commandSearchBuffer[7];
-      commandSearchBuffer[7] = SerialUSB.read();
-
-      if(commandCheck() == FRAME_DELIMINATOR){
-        break;
+void commandSearch(uint16_t jpegBufferSize) {
+  while (SerialInterface.available()) {
+    char c = SerialInterface.read();
+    if (!commandStartMS) {
+      if (c == '{') {
+        //start of JSON string
+        commandStartMS = millis();
+        commandBufPos = 0;
+      }
+    } else {
+      if (c == '}') {
+        //end of JSON string
+        commandBuffer[commandBufPos] = 0;
+        handleCDCcommand(String(commandBuffer));
+        commandStartMS = 0;
+        return;
+      } else {
+        //within JSON string, add bytes or wait for timeout
+        if (commandBufPos < sizeof(commandBuffer) - 1) {
+          commandBuffer[commandBufPos] = c;
+          commandBufPos++;
+        }
+        if (millis() - commandStartMS > commandStartTimeoutMS) {
+          commandStartMS = 0;
+        }
       }
     }
-  #else
-    while(cdc.available()){
-      // Move all bytes from right (highest index) to left (lowest index) in buffer
-      commandSearchBuffer[0] = commandSearchBuffer[1];
-      commandSearchBuffer[1] = commandSearchBuffer[2];
-      commandSearchBuffer[2] = commandSearchBuffer[3];
-      commandSearchBuffer[3] = commandSearchBuffer[4];
-      commandSearchBuffer[4] = commandSearchBuffer[5];
-      commandSearchBuffer[5] = commandSearchBuffer[6];
-      commandSearchBuffer[6] = commandSearchBuffer[7];
-      commandSearchBuffer[7] = cdc.read();
-
-      if(commandCheck() == FRAME_DELIMINATOR){
-        break;
-      }
-    }
-  #endif
+  }
 }
 
 
-#ifndef TINYTV_KIT_COMPILE
-bool incomingCDCHandler(uint8_t *jpegBuffer, const uint16_t jpegBufferSize, uint16_t &jpegBufferReadCount = readCount){
-  if(cdc.available() > 0){
+bool incomingCDCHandler(uint8_t *jpegBuffer, uint16_t jpegBufferSize, bool *live, uint16_t *totalBytes) {
+  if (SerialInterface.available() > 0) {
     liveTimeoutStart = millis();
 
-    if(frameDeliminatorAcquired){
-      live = true;
-      //return fillBuffer(jpegBuffer, jpegBufferSize, jpegBufferReadCount);
-      if(frameSize == 0){
-        frameSize = (((uint16_t)commandSearchBuffer[7]) << 24) | (((uint16_t)commandSearchBuffer[6]) << 16) | (((uint16_t)commandSearchBuffer[5]) << 8) | ((uint16_t)commandSearchBuffer[4]);
-
-        if(frameSize >= jpegBufferSize){
-          frameSize = 0;
-          //jpegBufferReadCount = 0;
-          frameDeliminatorAcquired = false;
-          cdc.println("ERROR: Received frame size is too big, something went wrong, searching for frame deliminator...");
-        }
-      }else{
-        // If the frame size was determined, get number of bytes to read, check if done filling, then fill if not done
-        uint16_t bytesToReadCount = frameSize - (jpegBufferReadCount+1);
-
-        if(bytesToReadCount <= 0){
-          frameSize = 0;
-          frameDeliminatorAcquired = false;
-          JPEGBufferFilled(jpegBufferReadCount);
-          jpegBufferReadCount = 0;
-          return true;
-        }
-
-        // Just in case, check if this read will take us out of bounds, if so, restart (shouldn't happen except for future changes forgetting about this)
-        if(jpegBufferReadCount+bytesToReadCount < frameSize){
-          jpegBufferReadCount += cdc.read(jpegBuffer + jpegBufferReadCount, bytesToReadCount);
-        }else{
-          // Not going to get reset by decode so do it here so it doesn't get stuck out of bounds forever
-          jpegBufferReadCount = 0;
-
-          frameSize = 0;
-          frameDeliminatorAcquired = false;
-          cdc.println("ERROR: Tried to place jpeg data out of bounds...");
-        }
-      }
-      if (millis() - liveTimeoutStart >= liveTimeoutLimitms) // Do timeout check if we're waiting for data
-      {
-        frameSize = 0; 
-        frameDeliminatorAcquired = false;
-        live = false;
-      }
-      // Buffer not filled yet, wait for more bytes
-      return false;
-    }else{
+    if (!frameDeliminatorAcquired) {
       // Search for deliminator to get back to filling buffers or respond to commands
-      commandSearch();
+      commandSearch(jpegBufferSize);
     }
-  }else if(millis() - liveTimeoutStart >= liveTimeoutLimitms){
-    // A timeout is a time to reset states of both jpeg buffers, reset everything
-    frameSize = 0; 
-    frameDeliminatorAcquired = false;
-    live = false;
 
+    if (frameDeliminatorAcquired) {
+      //#ifdef ARDUINO_ARCH_RP2040
+      if (frameSize >= jpegBufferSize) {
+        frameSize = 0;
+        jpegBufferReadCount = 0;
+        frameDeliminatorAcquired = false;
+        //cdc.println("ERROR: Received frame size is too big");
+        return false;
+      }
+      *live = true;
+      if (frameSize) {
+        if (SerialInterface.available() > 0) {
+          // If the frame size was determined, get number of bytes to read, check if done filling, then fill if not done
+          uint16_t bytesToReadCount = frameSize - (jpegBufferReadCount + 1);
+
+
+          // Just in case, check if this read will take us out of bounds, if so, restart (shouldn't happen except for future changes forgetting about this)
+          if (jpegBufferReadCount + bytesToReadCount < frameSize) {
+#ifdef ARDUINO_ARCH_RP2040
+            jpegBufferReadCount += cdc.read(jpegBuffer + jpegBufferReadCount, bytesToReadCount);
+#else
+            while (SerialUSB.available() && bytesToReadCount) {
+              jpegBuffer[jpegBufferReadCount] = SerialUSB.read();
+              jpegBufferReadCount++;
+              bytesToReadCount = frameSize - (jpegBufferReadCount + 1);
+            }
+            //SerialUSB.println("received some frame data");
+#endif
+          } else {
+            // Not going to get reset by decode so do it here so it doesn't get stuck out of bounds forever
+            jpegBufferReadCount = 0;
+
+            frameSize = 0;
+            frameDeliminatorAcquired = false;
+            cdc.println("ERROR: Tried to place jpeg data out of bounds...");
+          }
+
+          if (bytesToReadCount <= 0) {
+            //cdc.println("Done receiving frame data");
+            //SerialUSB.println("Done receiving frame data");
+            frameSize = 0;
+            frameDeliminatorAcquired = false;
+            *totalBytes = jpegBufferReadCount;
+            jpegBufferReadCount = 0;
+            return true;
+          }
+        }
+      }
+      //#endif
+    }
+  } else if (millis() - liveTimeoutStart >= liveTimeoutLimitms) {
+    // A timeout is a time to reset states of both jpeg buffers, reset everything
+    cdc.println("Streaming timeout- outer loop");
+    frameSize = 0;
+    frameDeliminatorAcquired = false;
+    *live = false;
     // Wait for decoding to finish and then reset incoming jpeg data read counts (otherwise may start at something other than zero next time)
   }
-
   // No buffer filled, wait for more bytes
   return false;
 }
-#endif

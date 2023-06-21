@@ -3,7 +3,7 @@
 //
 //  Changelog:
 //  08/12/2022 Handed off the keys to the kingdom
-//  
+//
 //  02/08/2023 Cross-platform base committed
 //
 //  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
@@ -43,7 +43,7 @@ const bool secondCoreSD = false;
 
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
-  if (secondCoreSD && !ejected ) {
+  if (secondCoreSD /*&& !ejected*/ ) {
     while (lbaToWriteCount || lbaToReadCount);
     volatile int count = bufsize / 512;
     lbaToRead = lba * sectorLBACount;
@@ -51,7 +51,7 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
     lbaToReadCount = count;
     while (lbaToReadCount == count) {};
     return bufsize;
-  } else if(!ejected) {
+  } else if (/*!ejected*/ 1) {
     return sd.card()->readSectors(lba * sectorLBACount, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
   }
   return 0;
@@ -62,7 +62,7 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
-  if (secondCoreSD && !ejected ) {
+  if (secondCoreSD /* && !ejected*/ ) {
     while (lbaToWriteCount || lbaToReadCount);
     memcpy(lbaWriteBuff, buffer, bufsize);
     int count = bufsize / 512;
@@ -70,7 +70,7 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
     lbaToWritePos = 0;
     lbaToWriteCount = count;
     return bufsize;
-  } else if(!ejected) {
+  } else if (/*!ejected*/ 1) {
     return sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512) ? bufsize : -1;
   }
   return 0;
@@ -80,9 +80,9 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 // used to flush any pending cache.
 void msc_flush_cb(void)
 {
-  if (secondCoreSD && !ejected ) {
+  if (secondCoreSD /*&& !ejected*/ ) {
     fs_flushed = true;
-  } else if(!ejected) {
+  } else if (/*!ejected*/ 1) {
     sd.card()->syncDevice();
     sd.cacheClear();
   }
@@ -97,7 +97,15 @@ extern void displayNoVideosFound();
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
 {
   (void) lun;
-  (void) power_condition;
+  //(void) power_condition;
+  //  cdc.print(power_condition);
+  //  cdc.print(" ");
+  //  cdc.print(load_eject);
+  //  cdc.print(" ");
+  //  cdc.println(start);
+
+  //ejected = true;
+
   if (load_eject)
   {
     if (start)
@@ -107,6 +115,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
     else
     {
       ejected = true;
+      //return false;
     }
   }
   return true;
@@ -162,8 +171,7 @@ bool USBMSCJustStopped() {
 }
 bool handleUSBMSC(bool stopMSC) {
   if (mscActive) {
-    commandSearch();
-
+    //tud_ready doesn't seem to work, rely on ejected- doesn't seem to work in macos?
     if (count < 100 && !stopMSC && !ejected) {
       if ((millis() - timer > 1000) && !tud_ready() ) {
         count++;
@@ -186,12 +194,38 @@ bool handleUSBMSC(bool stopMSC) {
       yield();
     }
     mscActive = false;
-    dbgPrint("Media ejected.");
     sd.card()->syncDevice();
     sd.cacheClear();
-    while(sd.card()->isBusy()) {}
-    usb_msc.setReadWriteCallback(nullptr, nullptr, nullptr);
+    while (sd.card()->isBusy()) {}
+    //usb_msc.setReadWriteCallback(nullptr, nullptr, nullptr);
     ended = true;
   }
   return false;
+}
+
+
+void MSCloopCore1() {
+  if (secondCoreSD && !ejected ) {
+    if (lbaToReadCount) {
+      sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, 1);
+      lbaToReadPos += 512;
+      lbaToRead += 1;
+      lbaToReadCount -= 1;
+      //read first block, then remainder
+      if (lbaToReadCount) {
+        sd.card()->readSectors(lbaToRead, (uint8_t*) lbaToReadPos, lbaToReadCount);
+      }
+      lbaToReadCount = 0;
+    }
+    if (lbaToWriteCount) {
+      sd.card()->writeSectors(lbaToWrite, (uint8_t*)lbaWriteBuff + lbaToWritePos, lbaToWriteCount);
+      lbaToWriteCount = 0;
+    }
+    if (fs_flushed) {
+      sd.card()->syncDevice();
+      //sd.cacheClear();
+      while (sd.card()->isBusy()) {}
+      fs_flushed = false;
+    }
+  }
 }
