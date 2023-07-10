@@ -1,4 +1,13 @@
-
+//-------------------------------------------------------------------------------
+//  TinyCircuits TinyTV Firmware
+//
+//  Changelog:
+//  05/26/2023 Initial Release for TinyTV 2/Mini
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
+//-------------------------------------------------------------------------------
 
 
 uint16_t jpegBufferReadCount = 0;
@@ -159,7 +168,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, uint16_t jpegBufferSize, bool *live
 
             frameSize = 0;
             frameDeliminatorAcquired = false;
-            cdc.println("ERROR: Tried to place jpeg data out of bounds...");
+            SerialInterface.println("ERROR: Tried to place jpeg data out of bounds...");
           }
 
           if (bytesToReadCount <= 0) {
@@ -177,7 +186,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, uint16_t jpegBufferSize, bool *live
     }
   } else if (millis() - liveTimeoutStart >= liveTimeoutLimitms) {
     // A timeout is a time to reset states of both jpeg buffers, reset everything
-    cdc.println("Streaming timeout- outer loop");
+    SerialInterface.println("Streaming timeout- outer loop");
     frameSize = 0;
     frameDeliminatorAcquired = false;
     *live = false;

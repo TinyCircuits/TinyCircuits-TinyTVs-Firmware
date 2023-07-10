@@ -1,29 +1,13 @@
 //-------------------------------------------------------------------------------
-//  TinyCircuits RP2040TV Video Player, Audio Component
+//  TinyCircuits TinyTV Firmware
 //
 //  Changelog:
-//  08/12/2022 Handed off the keys to the kingdom
-//
+//  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
 //
-//  Written by Mason Watmough for TinyCircuits, http://TinyCircuits.com
-//  Heavily adapted from software originally written by Ben Rose
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
 //-------------------------------------------------------------------------------
-
-/*
-    This file is part of the RP2040TV Player.
-    RP2040TV Player is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published
-    by the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-    RP2040TV Player is distributed in the hope that it will be useful, but
-    WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
-    or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-    You should have received a copy of the GNU General Public License along with
-    the RP2040TV Player. If not, see <https://www.gnu.org/licenses/>.
-*/
-
-
 
 volatile int sampleIndex = 0;
 volatile int loadedSampleIndex = 0;
@@ -118,7 +102,11 @@ void pwmInterruptHandler(void) {
   }
 
   if (!mute) {
+#ifdef TinyTVMini
+    SET_DAC_LEVEL((sample & 0x03FF)>>2);
+#else
     SET_DAC_LEVEL(sample & 0x03FF);
+#endif
   }
   // Clear the interrupt
   CLEAR_DAC_IRQ();

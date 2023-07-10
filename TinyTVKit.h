@@ -1,8 +1,16 @@
+//-------------------------------------------------------------------------------
+//  TinyCircuits TinyTV Firmware
+//
+//  Changelog:
+//  05/26/2023 Initial Release for TinyTV 2/Mini
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
+//-------------------------------------------------------------------------------
 
 #define TINYTV_KIT_COMPILE
-
 #define TYPE_STRING "TinyTVKit"
-
 #define TinyTVKit 1
 
 const int VIDEO_X = 0;

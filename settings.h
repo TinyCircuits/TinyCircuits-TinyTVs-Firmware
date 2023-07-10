@@ -1,6 +1,16 @@
+//-------------------------------------------------------------------------------
+//  TinyCircuits TinyTV Firmware
+//
+//  Changelog:
+//  05/26/2023 Initial Release for TinyTV 2/Mini
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
+//-------------------------------------------------------------------------------
 
 // SETTINGS DEFAULTS
-int channelNumber = 1;
+int channelNumber = 0;
 //int volumeSetting = 3;
 bool alphabetizedPlaylist = true;
 bool loopVideo = true;

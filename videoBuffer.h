@@ -1,3 +1,13 @@
+//-------------------------------------------------------------------------------
+//  TinyCircuits TinyTV Firmware
+//
+//  Changelog:
+//  05/26/2023 Initial Release for TinyTV 2/Mini
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
+//-------------------------------------------------------------------------------
 
 
 volatile bool frameReady[2] = {false, false};

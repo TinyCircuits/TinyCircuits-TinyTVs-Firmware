@@ -1,25 +1,25 @@
 //-------------------------------------------------------------------------------
-//  TinyCircuits RP2040TV Video Player
+//  TinyCircuits TinyTV Firmware
 //
+//  Board Package: Raspberry Pi Pico/RP2040 by Earle F. Philhower, III version 2.6.0
 //  Board: Raspberry Pi Pico
 //  CPU Speed: 200MHz TinyTV 2/ 50MHZ TinyTV Mini
-//  Optimization: Even more (-O3)
 //  USB Stack: Adafruit TinyUSB
 //
 //  Changelog:
-//  08/12/2022 Handed off the keys to the kingdom
-//
+//  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
 //
-//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//  Board Package customizations:
+//  packages\rp2040\hardware\rp2040\2.5.2\variants\rpipico  ->  #define PIN_LED        (12u)
+//  packages\rp2040\hardware\rp2040\2.5.2\libraries\Adafruit_TinyUSB_Arduino\src\arduino\ports\rp2040 tweaked CFG_TUD_MSC_EP_BUFSIZE to 512*8
 //
-// packages\rp2040\hardware\rp2040\2.5.2\variants\rpipico  ->  #define PIN_LED        (12u)
-// packages\rp2040\hardware\rp2040\2.5.2\libraries\Adafruit_TinyUSB_Arduino\src\arduino\ports\rp2040 tweaked CFG_TUD_MSC_EP_BUFSIZE to 512*8
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
 //
 //-------------------------------------------------------------------------------
 
 /*
-    This file is part of the RP2040TV Player.
+    This file is part of the TinyCircuits TinyTV Firmware.
     RP2040TV Player is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published
     by the Free Software Foundation, either version 3 of the License, or
@@ -36,8 +36,8 @@
 
 // This include order matters
 #include <SPI.h>
-#include <TinyScreen.h>
-#include <SdFat.h>                  // Custom SdFat for RP2040
+#include "src/TinyScreen/TinyScreen.h"
+#include <SdFat.h>
 #include <JPEGDEC.h>                // minor customization
 #include "globals.h"
 #include "versions.h"
@@ -58,8 +58,8 @@ Adafruit_USBD_CDC cdc;
 
 
 // Select ONE from this list!
-#include "TinyTV2.h"
-//#include "TinyTVMini.h"
+//#include "TinyTV2.h"
+#include "TinyTVMini.h"
 //#include "TinyTVKit.h"
 
 

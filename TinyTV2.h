@@ -1,12 +1,22 @@
+//-------------------------------------------------------------------------------
+//  TinyCircuits TinyTV Firmware
+//
+//  Changelog:
+//  05/26/2023 Initial Release for TinyTV 2/Mini
+//  02/08/2023 Cross-platform base committed
+//
+//  Written by Mason Watmough, Ben Rose, and Jason Marcum for TinyCircuits, http://TinyCircuits.com
+//
+//-------------------------------------------------------------------------------
 
-#define TINYTV2_COMPILE
 #include "hardware/pwm.h"
 
+#define TINYTV2_COMPILE
 #define TYPE_STRING "TinyTV2"
 
-const int VIDEO_X = 24 + 6;
+const int VIDEO_X = 30;
 const int VIDEO_Y = 0;
-const int VIDEO_W = 216 - 6;
+const int VIDEO_W = 210;
 const int VIDEO_H = 135;
 const int VIDEOBUF_SIZE = 1024 * 20;
 const int VIDEOBUF_CNT = 2;
@@ -299,16 +309,6 @@ void volumeUp() {
     volumeSetting++;
   }
   setVolume(volumeSetting);
-  /*
-    soundVolume += 32;
-    if (soundVolume >= 256) {
-    #ifndef TinyTVMini
-    soundVolume = 256;
-    #else
-    soundVolume &= 0xFF; // Wrap audio around on the mini because we have no vol. down
-    #endif
-    }
-  */
 }
 
 void volumeDown() {
@@ -316,7 +316,4 @@ void volumeDown() {
     volumeSetting--;
   }
   setVolume(volumeSetting);
-  /*soundVolume -= 32;
-    if (soundVolume < 0) soundVolume = 0;
-  */
 }
