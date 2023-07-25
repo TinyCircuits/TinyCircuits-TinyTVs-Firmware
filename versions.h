@@ -24,7 +24,7 @@
 #define PATCH 0
 
 // *** These comments are used by the update page, update them when the above MAJOR, MINOR, or PATCH numbers change ***
-// If a change is made that doesn't affect a specific platform, thses can be used to NOT notify the user of an update
+// If a change is made that doesn't affect a specific platform, these can be used to NOT notify the user of an update
 // on the update webpage.
 // CONDITIONS:
 //  * Increase and match the version number to the above defines if a change is made in the code that will affect a specific platform
@@ -36,13 +36,13 @@
 //             the latest firmware file from GitHub and upload it. Even if the required version below doesn't change for a platform, a new firmware binary
 //             needs to compiled so as to report the latest MAJOR, MINOR, and PATCH version
 // TINYTV_2_VERSION_REQUIRED_MAJOR 1
-// TINYTV_2_VERSION_REQUIRED_MINOR 0
+// TINYTV_2_VERSION_REQUIRED_MINOR 1
 // TINYTV_2_VERSION_REQUIRED_PATCH 0
 
 // TINYTV_MINI_VERSION_REQUIRED_MAJOR 1
-// TINYTV_MINI_VERSION_REQUIRED_MINOR 0
+// TINYTV_MINI_VERSION_REQUIRED_MINOR 1
 // TINYTV_MINI_VERSION_REQUIRED_PATCH 0
 
 // TINYTV_DIY_VERSION_REQUIRED_MAJOR 1
-// TINYTV_DIY_VERSION_REQUIRED_MINOR 0
+// TINYTV_DIY_VERSION_REQUIRED_MINOR 1
 // TINYTV_DIY_VERSION_REQUIRED_PATCH 0
