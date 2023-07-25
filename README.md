@@ -24,7 +24,7 @@ Read the rest of the `versions.h` file for updating the `REQUIRED` versions. The
 2. New binaries with the following names need to be committed at the same time with a commit message noting the version they were compiled:
     * `binaries/TinyTV-2-firmware.uf2`
     * `binaries/TinyTV-Mini-firmware.uf2`
-    * `binaries/TinyTV-DIY-firmware.uf2`
+    * `binaries/TinyTV-DIY-firmware.bin`
 
 The names need to remain the same for the `TinyTV-Site` update page to find them. Make sure the UF2s are placed in this repository's `binaries` folder.
 
