@@ -37,7 +37,7 @@ Follow the below steps to build a firmware image using the Arduino IDE.
 Unzip and move each of the folders in `src` (called that instead of 'lib' because of Arduino nomenclature) to your `Documents/Arduino/libraries` folder
 * `JPEGDEC`: library for decoding JPEG frames for serial streaming and JPEG AVI video playback
 * `SdFat`: library for interacting with SD cards
-* `IRemote`: for handling the remote IR receiver and IR codes
+* `IRremote`: for handling the remote IR receiver and IR codes
 
 Leave these custom libraries in the `src` folder
 * `TinyScreen`: modified TinyScreen+ library to include support for TFT displays
