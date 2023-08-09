@@ -27,6 +27,10 @@ uint32_t sectorLBACount = 1;
 
 const bool secondCoreSD = false;
 
+
+uint32_t lastMSCRead = 0;
+uint32_t lastMSCWrite = 0;
+
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
   if (secondCoreSD /*&& !ejected*/ ) {
@@ -38,6 +42,7 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
     while (lbaToReadCount == count) {};
     return bufsize;
   } else if (/*!ejected*/ 1) {
+    lastMSCRead = millis();
     return sd.card()->readSectors(lba * sectorLBACount, (uint8_t *)buffer, bufsize / 512) ? bufsize : -1;
   }
   return 0;
@@ -57,6 +62,7 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
     lbaToWriteCount = count;
     return bufsize;
   } else if (/*!ejected*/ 1) {
+    lastMSCWrite = millis();
     return sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512) ? bufsize : -1;
   }
   return 0;
@@ -112,7 +118,7 @@ bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, boo
 
 void USBMSCInit() {
   usb_msc.setID("TinyCircuits", "RP2040TV", "1.0");
-  usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
+  //usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
   usb_msc.setUnitReady(false);
   usb_msc.begin();
 }
@@ -155,6 +161,15 @@ bool USBMSCJustStopped() {
   }
   return false;
 }
+
+bool USBMSCRecentActivity(){
+  if( millis()- lastMSCRead < 500)
+    return true;
+  if( millis()- lastMSCWrite < 500)
+    return true;
+  return false;
+}
+
 bool handleUSBMSC(bool stopMSC) {
   if (mscActive) {
     //tud_ready doesn't seem to work, rely on ejected- doesn't seem to work in macos?
@@ -170,12 +185,13 @@ bool handleUSBMSC(bool stopMSC) {
     }
 
 
-    for (int i = 0; i < 50; i++) {
+    for (int i = 0; i < 50 || USBMSCRecentActivity(); i++) {
       delay(1);
       yield();
     }
     usb_msc.setUnitReady(false);
-    for (int i = 0; i < 50; i++) {
+    usb_msc.setReadWriteCallback(nullptr, nullptr, nullptr);
+    for (int i = 0; i < 50 || USBMSCRecentActivity(); i++) {
       delay(1);
       yield();
     }

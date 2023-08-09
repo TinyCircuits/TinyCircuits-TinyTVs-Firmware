@@ -21,7 +21,7 @@
 // even if the change did not affect every platform.
 #define MAJOR 1
 #define MINOR 1
-#define PATCH 0
+#define PATCH 1
 
 // *** These comments are used by the update page, update them when the above MAJOR, MINOR, or PATCH numbers change ***
 // If a change is made that doesn't affect a specific platform, these can be used to NOT notify the user of an update
@@ -37,12 +37,12 @@
 //             needs to compiled so as to report the latest MAJOR, MINOR, and PATCH version
 // TINYTV_2_VERSION_REQUIRED_MAJOR 1
 // TINYTV_2_VERSION_REQUIRED_MINOR 1
-// TINYTV_2_VERSION_REQUIRED_PATCH 0
+// TINYTV_2_VERSION_REQUIRED_PATCH 1
 
 // TINYTV_MINI_VERSION_REQUIRED_MAJOR 1
 // TINYTV_MINI_VERSION_REQUIRED_MINOR 1
-// TINYTV_MINI_VERSION_REQUIRED_PATCH 0
+// TINYTV_MINI_VERSION_REQUIRED_PATCH 1
 
 // TINYTV_DIY_VERSION_REQUIRED_MAJOR 1
-// TINYTV_DIY_VERSION_REQUIRED_MINOR 1
+// TINYTV_DIY_VERSION_REQUIRED_MINOR 0
 // TINYTV_DIY_VERSION_REQUIRED_PATCH 0
