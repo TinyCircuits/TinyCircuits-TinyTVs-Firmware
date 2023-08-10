@@ -11,23 +11,6 @@ See the TinyTV-Site repo for even more information and utility pages for streami
 
 Although we greatly appreciate feedback and contributions to our product's code, as a business it takes time to integrate, test, and deploy new versions of firmware. As is typical with software, there is an inherent risk of additional bugs and breakages upon release of new firmware, therefore, only contributions to this codebase that greatly improve the product and its functionally can be considered.
 
-## Versions/Changing the code
-
-Two steps **need** to be done to release a new version of the firmware:
-1. In `versions.h` update the firmware version (format `major.minor.patch`) in the defines according to these rules:
-    * `major`: incremented when the release contains breaking changes, all other numbers are set to 0
-    * `minor`: incremented when the release contains new non-breaking features, patch is set to 0
-    * `patch`: incremented when the release only contains bugfixes and very minor/trivial features considered necessary
-
-Read the rest of the `versions.h` file for updating the `REQUIRED` versions. The first version ever was `1.0.0`
-
-2. New binaries with the following names need to be committed at the same time with a commit message noting the version they were compiled:
-    * `binaries/TinyTV-2-firmware.uf2`
-    * `binaries/TinyTV-Mini-firmware.uf2`
-    * `binaries/TinyTV-DIY-firmware.bin`
-
-The names need to remain the same for the `TinyTV-Site` update page to find them. Make sure the UF2s are placed in this repository's `binaries` folder.
-
 ## Compiling: Arduino IDE
 
 Follow the below steps to build a firmware image using the Arduino IDE.
@@ -86,3 +69,7 @@ Uncomment one of these lines in the main .ino file to select the hardware target
 //#include "TinyTVKit.h"
 
 Now you can press the upload button (after choosing a port and/or putting the device into bootloader mode) or use `Sketch -> Export compiled Binary`.
+
+## Versions/Changing the code
+
+See the versions.h file
