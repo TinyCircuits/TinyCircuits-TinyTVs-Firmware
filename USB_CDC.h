@@ -59,21 +59,8 @@ void handleCDCcommand(String input) {
     //    cdc.print(", val = ");
     //    cdc.println(val);
     if (key == String("FRAME")) {
-      //#ifdef ARDUINO_ARCH_RP2040
-
-
-
       frameDeliminatorAcquired = true;
       frameSize = val.toInt();
-
-
-
-
-
-
-
-
-      //#endif
     } else if (key == String("GET")) {
       //cdc.println( String("{\"") + val + String("\":\"") + getKeyValue(val) + String("\"}"));
       SerialInterface.println( String("{\"") + val + String("\":") + getKeyValue(val) + String("}"));
@@ -83,6 +70,17 @@ void handleCDCcommand(String input) {
     } else if (key == String("SET")) {
       if (setKeyValue(val)) {
         inputFlags.settingsChanged = true;//.saveSettings();
+      }
+    } else if (key == String("FORMAT")) {
+      if (val == String("SDFAT")) {
+        FatFormatter fatFormatter;
+        uint8_t  sectorBuffer[512];
+        bool rtn = fatFormatter.format(sd.card(), sectorBuffer, NULL);
+        if (!rtn) {
+          SerialInterface.println("Sd Format Error");
+        }else{
+          SerialInterface.println("Sd Format Success");
+        }
       }
     } else {
       SerialInterface.println("Unhandled JSON key");
@@ -184,7 +182,7 @@ bool incomingCDCHandler(uint8_t *jpegBuffer, uint16_t jpegBufferSize, bool *live
       }
       //#endif
     }
-  } else if (millis() - liveTimeoutStart >= liveTimeoutLimitms) {
+  } else if (*live && millis() - liveTimeoutStart >= liveTimeoutLimitms) {
     // A timeout is a time to reset states of both jpeg buffers, reset everything
     SerialInterface.println("Streaming timeout- outer loop");
     frameSize = 0;
