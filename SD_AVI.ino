@@ -311,12 +311,42 @@ int nextVideo() {
   return 0;
 }
 
-int cmpstr(void const *a, void const *b) {
-  char const *aa = (char const *)a;
-  char const *bb = (char const *)b;
+// Replace strcasecmp with natural sorting algorithm from:
+// https://stackoverflow.com/questions/13856975/how-to-sort-file-names-with-numbers-and-alphabets-in-order-in-c
+int strcasecmp_withNumbers(const void *void_a, const void *void_b) {
+  const char *a = (char const *)void_a;
+  const char *b = (char const *)void_b;
 
-  return strcasecmp(aa, bb);
+  if (!a || !b) { // if one doesn't exist, other wins by default
+    return a ? 1 : b ? -1 : 0;
+  }
+  if (isdigit(*a) && isdigit(*b)) { // if both start with numbers
+    char *remainderA;
+    char *remainderB;
+    long valA = strtol(a, &remainderA, 10);
+    long valB = strtol(b, &remainderB, 10);
+    if (valA != valB)
+      return valA - valB;
+    // if you wish 7 == 007, comment out the next two lines
+    else if (remainderB - b != remainderA - a) // equal with diff lengths
+      return (remainderB - b) - (remainderA - a); // set 007 before 7
+    else // if numerical parts equal, recurse
+      return strcasecmp_withNumbers(remainderA, remainderB);
+  }
+  if (isdigit(*a) || isdigit(*b)) { // if just one is a number
+    return isdigit(*a) ? -1 : 1; // numbers always come first
+  }
+  while (*a && *b) { // non-numeric characters
+    if (isdigit(*a) || isdigit(*b))
+      return strcasecmp_withNumbers(a, b); // recurse
+    if (tolower(*a) != tolower(*b))
+      return tolower(*a) - tolower(*b);
+    a++;
+    b++;
+  }
+  return *a ? 1 : *b ? -1 : 0;
 }
+
 //#define cdc SerialUSB
 int loadVideoList() {
   //delay(5000);
@@ -361,7 +391,7 @@ int loadVideoList() {
   }
   dbgPrint("");
   if (alphabetizedPlaylist) {
-    qsort(temporaryFileNameList, aviCount, tempFileNameLength, cmpstr);
+    qsort(temporaryFileNameList, aviCount, tempFileNameLength, strcasecmp_withNumbers);
     for (int i = 0; i < aviCount; i++) {
       //dbgPrint(aviList[i]);
       dbgPrint(temporaryFileNameList + (i * tempFileNameLength));
