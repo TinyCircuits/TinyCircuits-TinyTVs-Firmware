@@ -105,6 +105,12 @@ void setup() {
   if (!initializeSDcard()) {
     displayCardNotFound();
     while (1) {
+      uint16_t totalJPEGBytesUnused;
+      incomingCDCHandler(getFreeJPEGBuffer(), /*VIDEOBUF_SIZE*/0, &live, &totalJPEGBytesUnused);
+#ifndef TinyTVKit
+      if (powerButtonPressed())
+        hardwarePowerOff();
+#endif
     }
   }
 
@@ -116,6 +122,12 @@ void setup() {
   if (!initializeFS()) {
     displayFileSystemError();
     while (1) {
+      uint16_t totalJPEGBytesUnused;
+      incomingCDCHandler(getFreeJPEGBuffer(), /*VIDEOBUF_SIZE*/0, &live, &totalJPEGBytesUnused);
+#ifndef TinyTVKit
+      if (powerButtonPressed())
+        hardwarePowerOff();
+#endif
     }
   }
 
@@ -174,7 +186,7 @@ void loop() {
   }
 #endif
 
-  //#ifdef has_USB_MSC
+
   if (getFreeJPEGBuffer()) {
     uint16_t totalJPEGBytes = 0;
     if (incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE, &live, &totalJPEGBytes)) {
@@ -186,17 +198,6 @@ void loop() {
     inputFlags.settingsChanged = false;
     settingsNeedSaved = millis();
   }
-  //#endif
-
-
-  if (showNoVideoError) {
-    displayNoVideosFound();
-    delay(30);
-    return;
-  }
-
-
-
 
 
   // IR remote using NEC codes for next/previous channel, volume up and down, and mute
@@ -347,7 +348,10 @@ void loop() {
 
   uint64_t t0 = micros();
 
-  if (nextVideoError) {
+  if (showNoVideoError) {
+    displayNoVideosFound();
+    delay(30);
+  }else if (nextVideoError) {
     if ( millis() - nextVideoError < 3000) {
       displayPlaybackError(getCurrentFilename());
       delay(30);
