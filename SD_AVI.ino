@@ -321,7 +321,7 @@ int cmpstr(void const *a, void const *b) {
 int loadVideoList() {
   //delay(5000);
   char * temporaryFileNameList = (char *)sharedBuffer; //use video and audio buffers to alphabetize filenames
-  int tempFileNameLength = 51;
+  int tempFileNameLength = MAX_LFN_LEN;
 #ifndef TinyTVKit
   //sd.vol()->ls(&);
 #else
@@ -332,12 +332,12 @@ int loadVideoList() {
   if (!rootDir.openRoot(sd.vol())) {
     dbgPrint("SD read error?");
   }
-  char fileName[100];
+  char fileName[MAX_LFN_LEN];
   aviCount = 0;
   while (infile.openNext(&rootDir, O_RDONLY) && aviCount < maxVideos) {
-    memset(fileName, 0, 100);
-    infile.getSFN(fileName, 100);
-    infile.getName(fileName, 100);
+    memset(fileName, 0, MAX_LFN_LEN);
+    infile.getSFN(fileName, MAX_LFN_LEN);
+    infile.getName(fileName, MAX_LFN_LEN);
     if (fileName[0] != '.') {
       if (!strcmp(fileName + strlen(fileName) - 4, ".avi")) {
         //strcpy(aviList[aviCount], fileName);

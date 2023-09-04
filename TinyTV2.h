@@ -28,7 +28,8 @@ uint8_t (*audioBuf) = (uint8_t (*))(sharedBuffer + VIDEOBUF_SIZE*VIDEOBUF_CNT);
 
 #define DOUBLE_BUFFER true
 
-#define MAX_VIDEO_FILES 50
+#define MAX_VIDEO_FILES 100
+#define MAX_LFN_LEN 150
 
 TinyScreen display = TinyScreen(RP2040TV);
 #include "splashes/FileNotFoundSplash_210x135.h"

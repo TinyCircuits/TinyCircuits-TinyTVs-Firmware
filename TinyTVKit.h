@@ -28,6 +28,7 @@ uint8_t (*audioBuf) = (uint8_t (*))(sharedBuffer + VIDEOBUF_SIZE*VIDEOBUF_CNT);
 #define DOUBLE_BUFFER false
 
 #define MAX_VIDEO_FILES 25
+#define MAX_LFN_LEN 50
 
 TinyScreen display = TinyScreen(TinyScreenPlus);
 #include "splashes/FileNotFoundSplash_96x64.h"
