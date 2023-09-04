@@ -58,8 +58,8 @@ Adafruit_USBD_CDC cdc;
 
 
 // Select ONE from this list!
-//#include "TinyTV2.h"
-#include "TinyTVMini.h"
+#include "TinyTV2.h"
+//#include "TinyTVMini.h"
 //#include "TinyTVKit.h"
 
 
@@ -158,7 +158,9 @@ void loop() {
   }
   if (!live) {
     if (handleUSBMSC(powerButtonPressed())) {
-      //USBMSC active:
+      //USBMSC active, handle CDC commands except for filling frames:
+      uint16_t totalJPEGBytesUnused;
+      incomingCDCHandler(getFreeJPEGBuffer(), /*VIDEOBUF_SIZE*/0, &live, &totalJPEGBytesUnused);
       return;
     } //else
     if (USBMSCJustStopped()) {
