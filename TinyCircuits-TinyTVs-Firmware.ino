@@ -240,15 +240,15 @@ void loop() {
     displayOff();
   }
 
-#ifndef TinyTVKit
   if (TVscreenOffMode) {
+#ifndef TinyTVKit
     // Turn TV off after 2 minutes in screen off mode
     if (millis() - TVscreenOffModeStartTime > 1000 * 60 * 2) {
       hardwarePowerOff();
     }
+#endif
     return;
   }
-#endif
 
   if (inputFlags.mute) {
     inputFlags.mute = false;
@@ -351,7 +351,7 @@ void loop() {
   if (showNoVideoError) {
     displayNoVideosFound();
     delay(30);
-  }else if (nextVideoError) {
+  } else if (nextVideoError) {
     if ( millis() - nextVideoError < 3000) {
       displayPlaybackError(getCurrentFilename());
       delay(30);
