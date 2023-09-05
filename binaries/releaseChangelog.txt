@@ -1,5 +1,6 @@
 1.2.0
-*Increase SD card filename length to 150 characters for TinyTV 2 and Mini, 
+*Increase SD card filename length to 150 characters for TinyTV 2 and Mini, 50 for DIY Kit
+*Increase maximum number of videos to 100 for TinyTV 2 and Mini, 25 for DIY Kit
 *Support SD card filenames with unicode characters
 *Better support for ordering filenames with leading numbers
 *Add SD card reformat command(supported on TinyTV.us website settings page)
