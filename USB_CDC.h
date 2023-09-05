@@ -41,6 +41,7 @@ uint32_t commandStartTimeoutMS = 20;
 
 bool setKeyValue(String);
 String getKeyValue(String);
+void initVideoPlayback();
 
 void handleCDCcommand(String input) {
   if ( input.length() > 5 && input.indexOf(":") >= 0) {
@@ -78,9 +79,14 @@ void handleCDCcommand(String input) {
         bool rtn = fatFormatter.format(sd.card(), sectorBuffer, NULL);
         if (!rtn) {
           SerialInterface.println("Sd Format Error");
-        }else{
+        } else {
           SerialInterface.println("Sd Format Success");
         }
+#ifndef TinyTVKit
+        delay(500);
+        hardwarePowerOff();
+#endif
+        initVideoPlayback();
       }
     } else {
       SerialInterface.println("Unhandled JSON key");

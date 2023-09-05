@@ -47,6 +47,12 @@ File32 infile;
 File32 dir;
 JPEGDEC jpeg;
 
+
+// Select ONE from this list!
+#include "TinyTV2.h"
+//#include "TinyTVMini.h"
+//#include "TinyTVKit.h"
+
 #ifdef ARDUINO_ARCH_RP2040
 #include <Adafruit_TinyUSB.h>
 Adafruit_USBD_MSC usb_msc;
@@ -56,18 +62,9 @@ Adafruit_USBD_CDC cdc;
 #endif
 #include "USB_CDC.h"
 
-
-// Select ONE from this list!
-#include "TinyTV2.h"
-//#include "TinyTVMini.h"
-//#include "TinyTVKit.h"
-
-
 #include "videoBuffer.h"
 #include "settings.h"
 #include "TinyIRReceiver.hpp"       // Unmodified IR library- requires IR_INPUT_PIN defined in hardware header
-
-
 
 
 
@@ -119,6 +116,10 @@ void setup() {
   USBMSCReady();
 #endif
 
+  initVideoPlayback();
+}
+
+void initVideoPlayback() {
   if (!initializeFS()) {
     displayFileSystemError();
     while (1) {
@@ -130,14 +131,10 @@ void setup() {
 #endif
     }
   }
-
-  initVideoPlayback();
-}
-
-void initVideoPlayback() {
   loadSettings();
   setVolume(volumeSetting);
   if (loadVideoList()) {
+    showNoVideoError = false;
     if (startVideoByChannel(channelNumber)) {
       nextVideoError = millis();
     } else {
