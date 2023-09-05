@@ -1,0 +1,9 @@
+1.2.0
+*Increase SD card filename length to 150 characters for TinyTV 2 and Mini, 
+*Support SD card filenames with unicode characters
+*Better support for ordering filenames with leading numbers
+*Add SD card reformat command(supported on TinyTV.us website settings page)
+*Fix bug that caused audible noise on TinyTV DIY Kit in soft power off mode
+
+1.1.1
+*Improvements to safely exit mass storage mode

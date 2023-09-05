@@ -11,6 +11,10 @@ See the TinyTV-Site repo for even more information and utility pages for streami
 
 Although we greatly appreciate feedback and contributions to our product's code, as a business it takes time to integrate, test, and deploy new versions of firmware. As is typical with software, there is an inherent risk of additional bugs and breakages upon release of new firmware, therefore, only contributions to this codebase that greatly improve the product and its functionally can be considered.
 
+## Versions/Changing the code
+
+This code repository reflects current development of the TinyTV Firmware. Occasionally TinyCircuits will create release binaries and change the source/binary version number according to the versions.h file. Pull requests should not have changes to the binaries or version number changes- we'll do our best here to manage version number changes and compiling/testing binaries, since the firmware goes directly on our hardware product.
+
 ## Compiling: Arduino IDE
 
 Follow the below steps to build a firmware image using the Arduino IDE.
@@ -20,6 +24,7 @@ Follow the below steps to build a firmware image using the Arduino IDE.
 Unzip and move each of the folders in `src` (called that instead of 'lib' because of Arduino nomenclature) to your `Documents/Arduino/libraries` folder
 * `JPEGDEC`: library for decoding JPEG frames for serial streaming and JPEG AVI video playback
 * `SdFat`: library for interacting with SD cards
+    * Uncomment definition in SdFat/src/SdFatCongfig.h: `#define USE_UTF8_LONG_NAMES 1`
 * `IRremote`: for handling the remote IR receiver and IR codes
 
 Leave these custom libraries in the `src` folder
@@ -69,7 +74,3 @@ Uncomment one of these lines in the main .ino file to select the hardware target
 //#include "TinyTVKit.h"
 
 Now you can press the upload button (after choosing a port and/or putting the device into bootloader mode) or use `Sketch -> Export compiled Binary`.
-
-## Versions/Changing the code
-
-See the versions.h file
