@@ -17,6 +17,14 @@ uint8_t nextChunkTag[8];
 bool videoStreamReady = false;
 uint64_t tsMillisInitial = 0;
 uint32_t currentAudioRate = 0;
+uint64_t millisOffset = 0;
+
+void setMillisOffset(uint64_t val){
+  millisOffset = val;
+}
+uint64_t getMillisOffset(){
+  return millisOffset;
+}
 
 uint32_t getInt(uint8_t * intOffset) {
   return (uint32_t(intOffset[3]) << 24) | (uint32_t(intOffset[2]) << 16) | (uint32_t(intOffset[1]) << 8) | (uint32_t(intOffset[0]));
@@ -272,7 +280,7 @@ int startVideoByChannel(int channelNum) {
 
   channelNumber = newVideoIndex;
 
-  if (startVideo(aviList[newVideoIndex], liveMode ? millis() / 1000 : 0)) {
+  if (startVideo(aviList[newVideoIndex], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
@@ -288,7 +296,7 @@ int prevVideo() {
 
   channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo], liveMode ? millis() / 1000 : 0)) {
+  if (startVideo(aviList[currentVideo], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
@@ -305,7 +313,7 @@ int nextVideo() {
 
   channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo], liveMode ? millis() / 1000 : 0)) {
+  if (startVideo(aviList[currentVideo], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
