@@ -18,11 +18,26 @@ bool liveMode = true;
 bool doStaticEffects = true;
 bool showChannelNumber = true;
 bool showVolumeBar = true;
+int powerTimeoutSecs = 2 * 60;
 
 //#define cdc SerialUSB
 bool timeStamp = false;
 
-const char keyNames[][15] = {"tvType", "fwVersion", "channel", "volume", "alphabetize", "loopVideo", "liveVideo", "static", "showChannel", "showVolume"}; //showTime?
+const char keyNames[][15] = {
+  "tvType",
+  "fwVersion",
+  "channel",
+  "volume",
+  "alphabetize",
+  "loopVideo",
+  "liveVideo",
+  "static",
+  "showChannel",
+  "showVolume",
+#ifndef TinyTVKit
+  "powerOffSecs",
+#endif
+}; //showTime?
 
 String getKeyValue(String key) {
   if (key == String("tvType")) return String(TYPE_STRING);
@@ -39,6 +54,7 @@ String getKeyValue(String key) {
   if (key == String("static")) return String(doStaticEffects ? "true" : "false");
   if (key == String("showChannel")) return String(showChannelNumber ? "true" : "false");
   if (key == String("showVolume")) return String(showVolumeBar ? "true" : "false");
+  if (key == String("powerOffSecs")) return String(powerTimeoutSecs);
   return "none";
 }
 
@@ -74,6 +90,7 @@ bool setValueByKey(String key, String val) {
   else if (key == String("static")) doStaticEffects = (val == (String)"true") ? true : false;
   else if (key == String("showChannel")) showChannelNumber = (val == (String)"true") ? true : false;
   else if (key == String("showVolume")) showVolumeBar = (val == (String)"true") ? true : false;
+  else if (key == String("powerOffSecs")) powerTimeoutSecs = max(3,val.toInt());
   else return false;
   return true;
 }
