@@ -77,7 +77,9 @@ bool skipNextFrame = false;
 unsigned long totalTime = 0;
 uint64_t powerDownTimer = 0;
 bool TVscreenOffMode = false;
-uint32_t settingsNeedSaved = 0;
+uint64_t settingsNeedSaved = 0;
+const int timeUntilSaveStandard = 2000;
+const int timeUntilSaveShutdown = 1000;
 uint64_t framerateHelper = 0;
 bool live = false;
 int staticTimeMS = 300;
@@ -132,6 +134,16 @@ void initVideoPlayback() {
     }
   }
   loadSettings();
+  if (allowResume) {
+    if (shuffleResume) {
+      randomSeed(startTimeSecs);
+      setMillisOffset(random(1000000)*1000);
+    } else {
+      setMillisOffset(startTimeSecs*1000);
+    }
+  } else {
+    setMillisOffset(0);
+  }
   setVolume(volumeSetting);
   if (loadVideoList()) {
     showNoVideoError = false;
@@ -193,7 +205,7 @@ void loop() {
   }
   if (inputFlags.settingsChanged) {
     inputFlags.settingsChanged = false;
-    settingsNeedSaved = millis();
+    settingsNeedSaved = millis()+timeUntilSaveStandard;
   }
 
 
@@ -220,6 +232,16 @@ void loop() {
     } else {
       //set off timer
       powerDownTimer = millis();
+      if (allowResume) {
+        if (shuffleResume) {
+          startTimeSecs = millis();
+        } else {
+          startTimeSecs = (millis()+getMillisOffset())/1000;
+        }
+      } else {
+        startTimeSecs = 0;
+      }
+      settingsNeedSaved = millis()+timeUntilSaveShutdown;
     }
   }
 
@@ -257,7 +279,7 @@ void loop() {
   if (inputFlags.channelUp) {
     inputFlags.channelUp = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -275,7 +297,7 @@ void loop() {
   if (inputFlags.channelDown) {
     inputFlags.channelDown = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -292,7 +314,7 @@ void loop() {
   if (inputFlags.channelSet) {
     inputFlags.channelSet = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -310,7 +332,7 @@ void loop() {
   if (inputFlags.volUp) {
     inputFlags.volUp = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       dbgPrint("vol up");
       volumeUp();
       drawVolumeFor(1000);
@@ -319,7 +341,7 @@ void loop() {
   if (inputFlags.volDown) {
     inputFlags.volDown = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       dbgPrint("vol down");
       volumeDown();
       drawVolumeFor(1000);
@@ -329,7 +351,7 @@ void loop() {
     inputFlags.volumeSet = false;
     if (!TVscreenOffMode && !live) {
       setVolume(volumeSetting);
-      settingsNeedSaved = millis();
+      settingsNeedSaved = millis()+timeUntilSaveStandard;
       drawVolumeFor(1000);
     }
   }
@@ -472,7 +494,7 @@ void loop() {
 
 
   if (settingsNeedSaved) {
-    if (millis() - settingsNeedSaved > 2000) {
+    if (millis() - settingsNeedSaved > 0) {
       dbgPrint("Saving settings file");
       saveSettings();
       settingsNeedSaved = 0;

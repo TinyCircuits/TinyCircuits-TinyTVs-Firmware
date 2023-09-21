@@ -19,6 +19,9 @@ bool doStaticEffects = true;
 bool showChannelNumber = true;
 bool showVolumeBar = true;
 int powerTimeoutSecs = 2 * 60;
+long startTimeSecs = 0;
+bool allowResume = false;
+bool shuffleResume = false;
 
 //#define cdc SerialUSB
 bool timeStamp = false;
@@ -37,6 +40,9 @@ const char keyNames[][15] = {
 #ifndef TinyTVKit
   "powerOffSecs",
 #endif
+  "startTimeSecs",
+  "allowResume",
+  "shuffleResume",
 }; //showTime?
 
 String getKeyValue(String key) {
@@ -55,12 +61,15 @@ String getKeyValue(String key) {
   if (key == String("showChannel")) return String(showChannelNumber ? "true" : "false");
   if (key == String("showVolume")) return String(showVolumeBar ? "true" : "false");
   if (key == String("powerOffSecs")) return String(powerTimeoutSecs);
+  if (key == String("startTimeSecs")) return String(startTimeSecs);
+  if (key == String("allowResume")) return String(allowResume ? "true" : "false");
+  if (key == String("shuffleResume")) return String(shuffleResume ? "true" : "false");
   return "none";
 }
 
 void saveSettings() {
   File32 settingsFile;
-  settingsFile.open("settings.txt", O_WRITE | O_CREAT);
+  settingsFile.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   for (int i = 0; i < sizeof(keyNames) / sizeof(keyNames[0]); i++) {
     settingsFile.println(String(keyNames[i]) + "=" + getKeyValue(keyNames[i]));
   }
@@ -91,6 +100,9 @@ bool setValueByKey(String key, String val) {
   else if (key == String("showChannel")) showChannelNumber = (val == (String)"true") ? true : false;
   else if (key == String("showVolume")) showVolumeBar = (val == (String)"true") ? true : false;
   else if (key == String("powerOffSecs")) powerTimeoutSecs = max(3,val.toInt());
+  else if (key == String("startTimeSecs")) startTimeSecs = val.toInt();
+  else if (key == String("allowResume")) allowResume = (val == (String)"true") ? true : false;
+  else if (key == String("shuffleResume")) shuffleResume = (val == (String)"true") ? true : false;
   else return false;
   return true;
 }
