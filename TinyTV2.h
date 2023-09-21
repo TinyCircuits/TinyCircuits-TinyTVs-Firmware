@@ -75,10 +75,9 @@ const int ENCODER2_PINA = 25;
 const int ENCODER2_PINB = 24;
 
 // Ugly state variables for encoders
-volatile int encoderCW = 0;
-volatile int encoderCCW = 0;
-volatile int encoder2CW = 0;
-volatile int encoder2CCW = 0;
+volatile int encoderDirection = 0;
+volatile int encoder2Direction = 0;
+volatile int lastEncoderChangeTime = 0;
 int newPinA = 1;
 int newPinB = 1;
 int oldPinA = 1;
@@ -177,21 +176,24 @@ int initializeFS() {
 
 void updateButtonStates(inputFlagStruct * inputFlags) {
   // Encoder/button input
-  if (encoderCW > 0) {
-    encoderCW = 0;
-    inputFlags->channelUp = true;
-  }
-  if (encoderCCW > 0) {
-    encoderCCW = 0;
-    inputFlags->channelDown = true;
-  }
-  if (encoder2CW > 0) {
-    encoder2CW = 0;
-    inputFlags->volUp = true;
-  }
-  if (encoder2CCW > 0) {
-    encoder2CCW = 0;
-    inputFlags->volDown = true;
+
+  if (millis() - lastEncoderChangeTime > 20) {
+    if (encoderDirection > 0) {
+      encoderDirection = 0;
+      inputFlags->channelUp = true;
+    }
+    if (encoderDirection < 0) {
+      encoderDirection = 0;
+      inputFlags->channelDown = true;
+    }
+    if (encoder2Direction > 0) {
+      encoder2Direction = 0;
+      inputFlags->volUp = true;
+    }
+    if (encoder2Direction < 0) {
+      encoder2Direction = 0;
+      inputFlags->volDown = true;
+    }
   }
   if (powerButtonWasPressed && (millis() - powerButtonWasPressed > 20)) {
     if (digitalRead(POWER_BTN_PIN) == LOW) {
@@ -207,10 +209,11 @@ void encoderPinChange() {
   if (newPinA != oldPinA || newPinB != oldPinB) {
     if ( !oldPinB && !newPinB ) {
       if (!oldPinA &&  newPinA)
-        encoderCCW++;
+        encoderDirection = -1;
       if (oldPinA &&  !newPinA)
-        encoderCW++;
+        encoderDirection = 1;
     }
+    lastEncoderChangeTime = millis();
   }
   oldPinA = newPinA;
   oldPinB = newPinB;
@@ -222,10 +225,11 @@ void encoder2PinChange() {
   if (newPinA2 != oldPinA2 || newPinB2 != oldPinB2) {
     if ( !oldPinB2 && !newPinB2 ) {
       if (!oldPinA2 &&  newPinA2)
-        encoder2CCW++;
+        encoder2Direction = -1;
       if (oldPinA2 &&  !newPinA2)
-        encoder2CW++;
+        encoder2Direction = 1;
     }
+    lastEncoderChangeTime = millis();
   }
   oldPinA2 = newPinA2;
   oldPinB2 = newPinB2;
