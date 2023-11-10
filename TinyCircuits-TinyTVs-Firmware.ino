@@ -460,6 +460,41 @@ void loop() {
         }
       }
     }
+  } else if (isTSVStreamAvailable()) {
+    if (frameWaitDurationElapsed()) {
+      JPEGDRAW jd;
+      jd.x = 0;
+      jd.y = 0;
+      jd.iWidth = VIDEO_W;
+      jd.iHeight = 16;
+      jd.pPixels = (uint16_t*)videoBuf;
+      int totalHeight = VIDEO_H;
+      while (totalHeight) {
+        int blockHeight = min(16, totalHeight);
+        readTSVBytes((uint8_t*)videoBuf, VIDEO_W * blockHeight * 2);
+        uint16_t bgr;
+        for (int i = 0; i < VIDEO_W * blockHeight; i++) {
+          bgr = ((uint16_t*)videoBuf)[i];
+          bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
+          bgr = ((bgr << 11) & 0xF800) | (bgr & 0x07E0) | ((bgr >> 11) & 0x001F);
+          bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
+          ((uint16_t*)videoBuf)[i] = bgr;
+        }
+        jd.iHeight = blockHeight;
+        JPEGDraw(&jd);
+        jd.y += blockHeight;
+        totalHeight -= blockHeight;
+      }
+      for (int blocks = 0; blocks < 4; blocks++) {
+        uint8_t audioBuffer[512];
+        int bytes = readTSVBytes(audioBuffer, sizeof(audioBuffer));
+        for (int i = 0; i < bytes / 2; i++) {
+          uint16_t sample = ((uint16_t *)audioBuffer)[i];
+          audioBuffer[i] = sample >> 2;
+        }
+        addToAudioBuffer(audioBuffer, bytes / 2);
+      }
+    }
   }
 
 

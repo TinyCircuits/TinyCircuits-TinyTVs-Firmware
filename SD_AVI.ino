@@ -14,15 +14,16 @@ char aviList[maxVideos][13] = {"\0"};
 int aviCount = 0;
 uint32_t livePos;
 uint8_t nextChunkTag[8];
-bool videoStreamReady = false;
+bool videoStreamReadyAVI = false;
+bool videoStreamReadyTSV = false;
 uint64_t tsMillisInitial = 0;
 uint32_t currentAudioRate = 0;
 uint64_t millisOffset = 0;
 
-void setMillisOffset(uint64_t val){
+void setMillisOffset(uint64_t val) {
   millisOffset = val;
 }
-uint64_t getMillisOffset(){
+uint64_t getMillisOffset() {
   return millisOffset;
 }
 
@@ -213,7 +214,7 @@ int getVideoInfo(int startTimeOffsetS) {
         {
           return 1;
         }
-        videoStreamReady = true;
+        videoStreamReadyAVI = true;
         return 0;
       }
       return 1;
@@ -226,8 +227,32 @@ int getVideoInfo(int startTimeOffsetS) {
   return 1;
 }
 
+int readTSVBytes(uint8_t * dest, int maxLen) {
+  return infile.read(dest, maxLen);
+}
+
+int getTSVVideoInfo(int startTimeOffsetS) {
+  uint32_t frameRate = 30;
+  currentAudioRate = frameRate * 1024;
+  targetFrameTime = 1000000 / frameRate;
+  videoStreamReadyTSV = true;
+
+  uint32_t frameSizeBytes = (VIDEO_W * VIDEO_H * 2) + (1024 * 2); // video + audio bytes per frame
+  uint32_t totalFrames = infile.fileSize() / frameSizeBytes;
+
+  int framesToSkip = startTimeOffsetS * frameRate;
+  framesToSkip = framesToSkip % totalFrames;
+
+  infile.seekSet(framesToSkip * frameSizeBytes);
+  return 0;
+}
+
 bool isAVIStreamAvailable() {
-  return videoStreamReady;
+  return videoStreamReadyAVI;
+}
+
+bool isTSVStreamAvailable() {
+  return videoStreamReadyTSV;
 }
 
 int getVideoAudioRate() {
@@ -235,7 +260,9 @@ int getVideoAudioRate() {
 }
 
 int startVideo(const char* n, int startTimeS) {
-  videoStreamReady = false;
+  videoStreamReadyAVI = false;
+  videoStreamReadyTSV = false;
+
   if (n[0] != 0) {
     // Open the video file or the next one if we can't
     infile.close();
@@ -246,20 +273,32 @@ int startVideo(const char* n, int startTimeS) {
       return 1;
     }
   }
-  char fileHeader[12] = {0};
   infile.rewind();
-  if (infile.read(fileHeader, 12) != 12) {
-    dbgPrint("Video read error");
-    return 1;
-  }
-  // Make sure we can parse it
-  if ((strncmp((char *)fileHeader + 0, "RIFF", 4)) || (strncmp((char *)fileHeader + 8, "AVI ", 4))) {
-    dbgPrint("Infile is not a RIFF AVI file");
-    return 2;
-  }
-  if (getVideoInfo(startTimeS)) {
-    dbgPrint("Error finding stream info or read error");
-    return 3;
+
+
+  char fileName[13];
+  memset(fileName, 0, 13);
+  infile.getSFN(fileName, 13);
+  if (!strcmp(fileName + strlen(fileName) - 4, ".avi") || !strcmp(fileName + strlen(fileName) - 4, ".AVI")) {
+    char fileHeader[12] = {0};
+    if (infile.read(fileHeader, 12) != 12) {
+      dbgPrint("Video read error");
+      return 1;
+    }
+    // Make sure we can parse it
+    if ((strncmp((char *)fileHeader + 0, "RIFF", 4)) || (strncmp((char *)fileHeader + 8, "AVI ", 4))) {
+      dbgPrint("Infile is not a RIFF AVI file");
+      return 2;
+    }
+    if (getVideoInfo(startTimeS)) {
+      dbgPrint("Error finding stream info or read error");
+      return 3;
+    }
+  } else if (!strcmp(fileName + strlen(fileName) - 4, ".tsv") || !strcmp(fileName + strlen(fileName) - 4, ".TSV")) {
+    getTSVVideoInfo(startTimeS);
+  } else {
+    dbgPrint("Error- file is not AVI or TSV");
+    return 4;
   }
   tsMillisInitial = millis();
   return 0;
@@ -280,7 +319,7 @@ int startVideoByChannel(int channelNum) {
 
   channelNumber = newVideoIndex;
 
-  if (startVideo(aviList[newVideoIndex], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
+  if (startVideo(aviList[newVideoIndex], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
@@ -296,7 +335,7 @@ int prevVideo() {
 
   channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
+  if (startVideo(aviList[currentVideo], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
@@ -313,7 +352,7 @@ int nextVideo() {
 
   channelNumber = currentVideo;
 
-  if (startVideo(aviList[currentVideo], liveMode ? (millis()+millisOffset) / 1000 : 0)) {
+  if (startVideo(aviList[currentVideo], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
@@ -377,7 +416,7 @@ int loadVideoList() {
     infile.getSFN(fileName, MAX_LFN_LEN);
     infile.getName(fileName, MAX_LFN_LEN);
     if (fileName[0] != '.') {
-      if (!strcmp(fileName + strlen(fileName) - 4, ".avi")) {
+      if (!strcasecmp(fileName + strlen(fileName) - 4, ".avi") || !strcasecmp(fileName + strlen(fileName) - 4, ".tsv")) {
         //strcpy(aviList[aviCount], fileName);
         strcpy(temporaryFileNameList + (aviCount * tempFileNameLength), fileName);
         aviCount++;
