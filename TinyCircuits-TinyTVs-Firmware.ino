@@ -137,9 +137,9 @@ void initVideoPlayback() {
   if (allowResume) {
     if (shuffleResume) {
       randomSeed(startTimeSecs);
-      setMillisOffset(random(1000000)*1000);
+      setMillisOffset(random(1000000) * 1000);
     } else {
-      setMillisOffset(startTimeSecs*1000);
+      setMillisOffset(startTimeSecs * 1000);
     }
   } else {
     setMillisOffset(0);
@@ -177,21 +177,27 @@ void loop() {
     }
     displayUSBMSCmessage();
   }
-  if (!live) {
-    if (handleUSBMSC(powerButtonPressed())) {
-      //USBMSC active, handle CDC commands except for filling frames:
-      uint16_t totalJPEGBytesUnused;
-      incomingCDCHandler(getFreeJPEGBuffer(), /*VIDEOBUF_SIZE*/0, &live, &totalJPEGBytesUnused);
-      return;
-    } //else
-    if (USBMSCJustStopped()) {
-      for (int i = 0; i < 50; i++) {
-        delay(1); yield();
+  //if (!live) {
+  if (handleUSBMSC(powerButtonPressed())) {
+    //USBMSC active, handle CDC commands except for filling frames:
+    uint16_t totalJPEGBytesUnused;
+    if (getFreeJPEGBuffer()) {
+      if (incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE, &live, &totalJPEGBytesUnused)) {
+        handleUSBMSC(true);
       }
-      //USBMSC ejected, return to video playback:
-      clearPowerButtonPressInt();
-      initVideoPlayback();
+    } else {
+      incomingCDCHandler(NULL, 0, &live, &totalJPEGBytesUnused);
     }
+    return;
+  }
+  //}
+  if (USBMSCJustStopped()) {
+    for (int i = 0; i < 50; i++) {
+      delay(1); yield();
+    }
+    //USBMSC ejected, return to video playback:
+    clearPowerButtonPressInt();
+    initVideoPlayback();
   }
 #endif
 
@@ -205,7 +211,7 @@ void loop() {
   }
   if (inputFlags.settingsChanged) {
     inputFlags.settingsChanged = false;
-    settingsNeedSaved = millis()+timeUntilSaveStandard;
+    settingsNeedSaved = millis() + timeUntilSaveStandard;
   }
 
 
@@ -236,12 +242,12 @@ void loop() {
         if (shuffleResume) {
           startTimeSecs = millis();
         } else {
-          startTimeSecs = (millis()+getMillisOffset())/1000;
+          startTimeSecs = (millis() + getMillisOffset()) / 1000;
         }
       } else {
         startTimeSecs = 0;
       }
-      settingsNeedSaved = millis()+timeUntilSaveShutdown;
+      settingsNeedSaved = millis() + timeUntilSaveShutdown;
     }
   }
 
@@ -279,7 +285,7 @@ void loop() {
   if (inputFlags.channelUp) {
     inputFlags.channelUp = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -297,7 +303,7 @@ void loop() {
   if (inputFlags.channelDown) {
     inputFlags.channelDown = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -314,7 +320,7 @@ void loop() {
   if (inputFlags.channelSet) {
     inputFlags.channelSet = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       if (doStaticEffects) {
         drawStaticFor(staticTimeMS);
         playStaticFor(staticTimeMS);
@@ -332,7 +338,7 @@ void loop() {
   if (inputFlags.volUp) {
     inputFlags.volUp = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       dbgPrint("vol up");
       volumeUp();
       drawVolumeFor(1000);
@@ -341,7 +347,7 @@ void loop() {
   if (inputFlags.volDown) {
     inputFlags.volDown = false;
     if (!TVscreenOffMode && !live) {
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       dbgPrint("vol down");
       volumeDown();
       drawVolumeFor(1000);
@@ -351,7 +357,7 @@ void loop() {
     inputFlags.volumeSet = false;
     if (!TVscreenOffMode && !live) {
       setVolume(volumeSetting);
-      settingsNeedSaved = millis()+timeUntilSaveStandard;
+      settingsNeedSaved = millis() + timeUntilSaveStandard;
       drawVolumeFor(1000);
     }
   }
