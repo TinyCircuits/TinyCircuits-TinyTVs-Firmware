@@ -160,19 +160,19 @@ int initializeFS() {
 }
 
 void updateButtonStates(inputFlagStruct * inputFlags){
-  if (leftUpButtonWasPressed) {
+  if (leftUpButtonWasPressed && (millis() - leftUpButtonWasPressed > 30)) {
     leftUpButtonWasPressed = false;
     inputFlags->volUp = true;
   }
-  if (rightUpButtonWasPressed) {
+  if (rightUpButtonWasPressed && (millis() - rightUpButtonWasPressed > 30)) {
     rightUpButtonWasPressed = false;
     inputFlags->channelUp = true;
   }
-  if (leftDownButtonWasPressed) {
+  if (leftDownButtonWasPressed && (millis() - leftDownButtonWasPressed > 30)) {
     leftDownButtonWasPressed = false;
     inputFlags->volDown = true;
   }
-  if (rightDownButtonWasPressed) {
+  if (rightDownButtonWasPressed && (millis() - rightDownButtonWasPressed > 30)) {
     rightDownButtonWasPressed = false;
     inputFlags->channelDown = true;
   }
