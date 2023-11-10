@@ -43,7 +43,7 @@ bool setKeyValue(String);
 String getKeyValue(String);
 void initVideoPlayback();
 
-void handleCDCcommand(String input) {
+bool handleCDCcommand(String input) {
   if ( input.length() > 5 && input.indexOf(":") >= 0) {
     String key = input.substring(0, input.indexOf(":"));
     String val = input.substring(input.indexOf(":") + 1);
@@ -94,7 +94,9 @@ void handleCDCcommand(String input) {
   } else {
     SerialInterface.print("Invalid JSON? ");
     SerialInterface.println(input);
+    return true;
   }
+  return false;
 }
 
 
@@ -111,7 +113,12 @@ void commandSearch(uint16_t jpegBufferSize) {
       if (c == '}') {
         //end of JSON string
         commandBuffer[commandBufPos] = 0;
-        handleCDCcommand(String(commandBuffer));
+        if (handleCDCcommand(String(commandBuffer))) {
+          // Format error- clear buffer
+          while (SerialInterface.available()) {
+            SerialInterface.read();
+          }
+        }
         commandStartMS = 0;
         return;
       } else {

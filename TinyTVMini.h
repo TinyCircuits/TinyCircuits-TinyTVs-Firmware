@@ -46,6 +46,7 @@ TinyScreen display = TinyScreen(RP2040TVMini);
 
 
 #ifdef DEBUGAPP
+extern Adafruit_USBD_CDC cdc;
 const void dbgPrint(const char* s) {
   cdc.println(s);
 }
