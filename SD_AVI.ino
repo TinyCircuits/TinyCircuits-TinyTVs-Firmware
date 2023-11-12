@@ -306,56 +306,40 @@ int startVideo(const char* n, int startTimeS) {
 
 
 char * getCurrentFilename() {
-  return aviList[channelNumber];
+  return aviList[channelNumber - 1];
 }
 
 int startVideoByChannel(int channelNum) {
-  int newVideoIndex = channelNum;
-  if (newVideoIndex >= aviCount) {
-    newVideoIndex = aviCount - 1;
+  channelNumber = channelNum;
+  if (channelNumber < 1) {
+    channelNumber = 1;
+  }
+  if (channelNumber > aviCount) {
+    channelNumber = aviCount;
   }
 
-  dbgPrint("Playing " + String(aviList[newVideoIndex]) + " Channel # is " + String(newVideoIndex));
+  dbgPrint("Playing " + String(aviList[channelNumber-1]) + " Channel # is " + String(channelNumber));
 
-  channelNumber = newVideoIndex;
-
-  if (startVideo(aviList[newVideoIndex], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
+  if (startVideo(aviList[channelNumber-1], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;
 }
 
 int prevVideo() {
-  int currentVideo = channelNumber;
-  currentVideo--;
-  if (currentVideo < 0) {
-    currentVideo = aviCount - 1;
+  channelNumber--;
+  if (channelNumber < 1) {
+    channelNumber = aviCount;
   }
-  dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
-
-  channelNumber = currentVideo;
-
-  if (startVideo(aviList[currentVideo], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
-    return 1;
-  }
-  return 0;
+  return startVideoByChannel(channelNumber);
 }
 
 int nextVideo() {
-  int currentVideo = channelNumber ;
-  currentVideo++;
-  if (currentVideo >= aviCount) {
-    currentVideo = 0;
+  channelNumber++;
+  if (channelNumber > aviCount) {
+    channelNumber = 1;
   }
-
-  dbgPrint("Playing " + String(aviList[currentVideo]) + " Channel # is " + String(channelNumber));
-
-  channelNumber = currentVideo;
-
-  if (startVideo(aviList[currentVideo], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
-    return 1;
-  }
-  return 0;
+  return startVideoByChannel(channelNumber);
 }
 
 // Replace strcasecmp with natural sorting algorithm from:

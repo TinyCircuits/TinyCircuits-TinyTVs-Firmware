@@ -10,7 +10,7 @@
 //-------------------------------------------------------------------------------
 
 // SETTINGS DEFAULTS
-int channelNumber = 0;
+int channelNumber = 1;
 //int volumeSetting = 3;
 bool alphabetizedPlaylist = true;
 bool loopVideo = true;
