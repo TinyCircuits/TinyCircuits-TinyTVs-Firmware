@@ -19,9 +19,8 @@ bool doStaticEffects = true;
 bool showChannelNumber = true;
 bool showVolumeBar = true;
 int powerTimeoutSecs = 2 * 60;
-long startTimeSecs = 0;
-bool allowResume = false;
-bool shuffleResume = false;
+bool randStartTime = true;
+bool randStartChan = false;
 
 //#define cdc SerialUSB
 bool timeStamp = false;
@@ -40,9 +39,8 @@ const char keyNames[][15] = {
 #ifndef TinyTVKit
   "powerOffSecs",
 #endif
-  "startTimeSecs",
-  "allowResume",
-  "shuffleResume",
+  "randStartTime",
+  "randStartChan",
 }; //showTime?
 
 String getKeyValue(String key) {
@@ -61,9 +59,8 @@ String getKeyValue(String key) {
   if (key == String("showChannel")) return String(showChannelNumber ? "true" : "false");
   if (key == String("showVolume")) return String(showVolumeBar ? "true" : "false");
   if (key == String("powerOffSecs")) return String(powerTimeoutSecs);
-  if (key == String("startTimeSecs")) return String(startTimeSecs);
-  if (key == String("allowResume")) return String(allowResume ? "true" : "false");
-  if (key == String("shuffleResume")) return String(shuffleResume ? "true" : "false");
+  if (key == String("randStartTime")) return String(randStartTime ? "true" : "false");
+  if (key == String("randStartChan")) return String(randStartChan ? "true" : "false");
   return "none";
 }
 
@@ -100,9 +97,8 @@ bool setValueByKey(String key, String val) {
   else if (key == String("showChannel")) showChannelNumber = (val == (String)"true") ? true : false;
   else if (key == String("showVolume")) showVolumeBar = (val == (String)"true") ? true : false;
   else if (key == String("powerOffSecs")) powerTimeoutSecs = max(3,val.toInt());
-  else if (key == String("startTimeSecs")) startTimeSecs = val.toInt();
-  else if (key == String("allowResume")) allowResume = (val == (String)"true") ? true : false;
-  else if (key == String("shuffleResume")) shuffleResume = (val == (String)"true") ? true : false;
+  else if (key == String("randStartTime")) randStartTime = (val == (String)"true") ? true : false;
+  else if (key == String("randStartChan")) randStartChan = (val == (String)"true") ? true : false;
   else return false;
   return true;
 }
@@ -113,37 +109,10 @@ bool setKeyValue(String line) {
     String val = line.substring(line.indexOf("=") + 1);
     key.trim();
     val.trim();
-    //    cdc.print("key = ");
-    //    cdc.print(key);
-    //    cdc.print(", val = ");
-    //    cdc.println(val);
     if ( isValidKey(key)) {
-      //cdc.print("setting key");
       return setValueByKey(key, val);
     } else {
-      /*String keyLower = key;
-        String valLower = val;
-        keyLower.toLowerCase();
-        valLower.toLowerCase();
-        if (keyLower == String("diy")) {
-        if (valLower == String("true")) {
-          preferences.putBool("DIY", true);
-        } else {
-          preferences.putBool("DIY", false);
-        }
-        }
-        if (keyLower == String("longpress")) {
-        if (valLower == String("ble")) {
-          longPressAction = longPressActionBLE;
-        } else if (valLower == String("longpressalerts")) {
-          longPressAction = longPressActionAlert;
-        }
-        }
-        if (keyLower == String("disableble")) {
-        if (valLower == String("true")) {
-          enableBLE = false;
-        }
-        }*/
+      // unhandled key - error message?
     }
   }
   return false;

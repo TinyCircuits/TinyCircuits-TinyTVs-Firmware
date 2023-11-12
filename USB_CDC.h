@@ -41,7 +41,7 @@ uint32_t commandStartTimeoutMS = 20;
 
 bool setKeyValue(String);
 String getKeyValue(String);
-void initVideoPlayback();
+void initVideoPlayback(bool);
 
 bool handleCDCcommand(String input) {
   if ( input.length() > 5 && input.indexOf(":") >= 0) {
@@ -86,7 +86,7 @@ bool handleCDCcommand(String input) {
         delay(500);
         hardwarePowerOff();
 #endif
-        initVideoPlayback();
+        initVideoPlayback(true);
       }
     } else {
       SerialInterface.println("Unhandled JSON key");
