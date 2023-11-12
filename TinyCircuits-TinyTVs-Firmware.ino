@@ -145,7 +145,7 @@ void initVideoPlayback(bool loadSettingsFile) {
   if (videoCount) {
     showNoVideoError = false;
     if (randStartChan) {
-      channelNumber = random(videoCount);
+      channelNumber = random(videoCount)+1;
       inputFlags.settingsChanged = true;
     }
     if (startVideoByChannel(channelNumber)) {
