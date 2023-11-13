@@ -49,9 +49,9 @@ JPEGDEC jpeg;
 
 
 // Select ONE from this list!
-//#include "TinyTV2.h"
+#include "TinyTV2.h"
 //#include "TinyTVMini.h"
-#include "TinyTVKit.h"
+//#include "TinyTVKit.h"
 
 #ifdef ARDUINO_ARCH_RP2040
 #include <Adafruit_TinyUSB.h>
@@ -453,6 +453,7 @@ void loop() {
     }
   } else if (isTSVStreamAvailable()) {
     if (frameWaitDurationElapsed()) {
+      newJPEGFrameSize(VIDEO_W,VIDEO_H);
       JPEGDRAW jd;
       jd.x = 0;
       jd.y = 0;
