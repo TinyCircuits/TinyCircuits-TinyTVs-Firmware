@@ -1,3 +1,13 @@
+1.2.1
+*Add setting for powerdown timeout
+*Add setting for random video start time
+*Improve channel/volume encoder debounce
+*(Thanks for the above omgitsraven!)
+*Add support for old TSV format for DIY Kit users
+*Change first channel to 1 instead of 0
+*USB mass storage mode and streaming bug fixes
+*Round corners on Mini 64x64 output
+
 1.2.0
 *Increase SD card filename length to 150 characters for TinyTV 2 and Mini, 50 for DIY Kit
 *Increase maximum number of videos to 100 for TinyTV 2 and Mini, 25 for DIY Kit

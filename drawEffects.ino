@@ -127,7 +127,11 @@ void drawChannelNumber(JPEGDRAW* block) {
         }
       } else {
         if (block->y < 8) {
-          screenBuffer.setCursor(IMG_W - 25 - block->x, 5 - block->y);
+          int xOffset = 25;
+          if (IMG_W == 64) {
+            xOffset = 32;
+          }
+          screenBuffer.setCursor(IMG_W - xOffset - block->x, 5 - block->y);
           screenBuffer.print(buf);
         }
       }
@@ -151,35 +155,47 @@ void setCornerRadius(uint8_t cropRadius) {
 }
 
 
-void drawCorners(JPEGDRAW* block) {
-  if (IMG_H > 64) {
+void drawCornersPartial(JPEGDRAW* block) {
+  if (IMG_H > 64 || IMG_W == 64) {
     if (block->y < 32 && block->x == 0) {
       for (int y = 0; y < block->iHeight && block->y + y < 24; y++) {
-        screenBuffer.drawLine(0, y, cropRadiusLimits[block->y + y]-1, y, 0x0000);
+        screenBuffer.drawLine(0, y, cropRadiusLimits[block->y + y], y, 0x0000);
       }
     }
     if (block->y < 32 && block->x + block->iWidth >= IMG_W) {
       for (int y = 0; y < block->iHeight && block->y + y < 24; y++) {
-        screenBuffer.drawLine(IMG_W - block->x - 1 - cropRadiusLimits[block->y + y], y, IMG_W - block->x - 1, y, 0x0000);
+        screenBuffer.drawLine(IMG_W - block->x - 0 - cropRadiusLimits[block->y + y], y, IMG_W - block->x - 1, y, 0x0000);
       }
     }
     if (block->y > IMG_H - 32 && block->x == 0) {
       for (int y = 0; y < block->iHeight; y++) {
         if (block->y + y > IMG_H - 25) {
-          screenBuffer.drawLine(0, y, cropRadiusLimits[ IMG_H - (block->y + y)]-1, y, 0x0000);
+          screenBuffer.drawLine(0, y, cropRadiusLimits[ IMG_H - (block->y + y)], y, 0x0000);
         }
       }
     }
     if (block->y > IMG_H - 32 && block->x + block->iWidth >= IMG_W) {
-      for (int y = 0; y < block->iHeight && block->y + y > IMG_H-25; y++) {
-        screenBuffer.drawLine(IMG_W - block->x - 1 - cropRadiusLimits[IMG_H - (block->y + y)], y, IMG_W - block->x - 1, y, 0x0000);
+      for (int y = 0; y < block->iHeight && block->y + y > IMG_H - 25; y++) {
+        screenBuffer.drawLine(IMG_W - block->x - 0 - cropRadiusLimits[IMG_H - (block->y + y)], y, IMG_W - block->x - 1, y, 0x0000);
       }
     }
-  } else {
-
   }
 }
 
+void drawCornersFull() {
+  for (int y = 0; y < 24; y++) {
+    screenBuffer.drawLine(0, y, cropRadiusLimits[y], y, 0x0000);
+  }
+  for (int y = 0; y < 24; y++) {
+    screenBuffer.drawLine(IMG_W - cropRadiusLimits[y], y, IMG_W - 1, y, 0x0000);
+  }
+  for (int y = 0; y < 24; y++) {
+    screenBuffer.drawLine(0, IMG_H - y-1, cropRadiusLimits[y], IMG_H - y-1, 0x0000);
+  }
+  for (int y = 0; y < 24; y++) {
+    screenBuffer.drawLine(IMG_W - cropRadiusLimits[y], IMG_H - y-1, IMG_W - 1, IMG_H - y-1, 0x0000);
+  }
+}
 
 
 // For tube off effect

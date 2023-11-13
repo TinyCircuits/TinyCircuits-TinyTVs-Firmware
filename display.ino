@@ -42,7 +42,7 @@ int JPEGDraw(JPEGDRAW* block) {
   drawStatic((uint16_t *)block->pPixels, block->iWidth, block->iHeight);
   drawVolume(block);
   drawChannelNumber(block);
-  drawCorners(block);
+  drawCornersPartial(block);
 
 
 
@@ -163,14 +163,15 @@ void initializeDisplay() {
   digitalWrite(9, HIGH); //needed?
   screenBuffer.setFont(thinPixel7_10ptFontInfo);
   screenBuffer.fontColor(0xFFFF, ALPHA_COLOR);
+  setCornerRadius(15);
 #else
   digitalWrite(9, LOW); //needed?
   screenBuffer.setFont(liberationSansNarrow_14ptFontInfo);
   screenBuffer.fontColor(0xFFFF, ALPHA_COLOR);
+  setCornerRadius(26);
 #endif
 #endif
 
-  setCornerRadius(26);
 }
 
 void displayOff() {
@@ -229,66 +230,79 @@ void clearDisplay() {
 void  displayPlaybackError(char * filename) {
   dbgPrint("Playback error: " + String(filename));
   waitForScreenDMA();
-  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W, VIDEO_H);
-  writeToScreenDMA((uint16_t *)PLAYBACK_ERROR_SPLASH, VIDEO_W * VIDEO_H);
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W - 1, VIDEO_H - 1);
+#if DOUBLE_BUFFER
+  memcpy((uint8_t*)frameBuf, (uint8_t*)PLAYBACK_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+  newJPEGFrameSize(VIDEO_W, VIDEO_H);
+  screenBuffer.setWidth(VIDEO_W);
+  screenBuffer.setBuffer((uint8_t *)frameBuf);
+  drawCornersFull();
+  display.writeBufferDMA((uint8_t *)frameBuf, VIDEO_W * VIDEO_H * 2);
+#else
+  display.writeBufferDMA((uint8_t *)PLAYBACK_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+#endif
 }
 
 void  displayCardNotFound() {
   dbgPrint("Card not found!");
   waitForScreenDMA();
-  display.endTransfer();
-  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
-  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
-  display.startData();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W - 1, VIDEO_H - 1);
+#if DOUBLE_BUFFER
+  memcpy((uint8_t*)frameBuf, (uint8_t*)NO_CARD_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+  newJPEGFrameSize(VIDEO_W, VIDEO_H);
+  screenBuffer.setWidth(VIDEO_W);
+  screenBuffer.setBuffer((uint8_t *)frameBuf);
+  drawCornersFull();
+  display.writeBufferDMA((uint8_t *)frameBuf, VIDEO_W * VIDEO_H * 2);
+#else
   display.writeBufferDMA((uint8_t *)NO_CARD_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+#endif
 }
 
 void  displayFileSystemError() {
   dbgPrint("Filesystem Error!");
   waitForScreenDMA();
-  display.endTransfer();
-  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
-  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
-  display.startData();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W - 1, VIDEO_H - 1);
+#if DOUBLE_BUFFER
+  memcpy((uint8_t*)frameBuf, (uint8_t*)STORAGE_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+  newJPEGFrameSize(VIDEO_W, VIDEO_H);
+  screenBuffer.setWidth(VIDEO_W);
+  screenBuffer.setBuffer((uint8_t *)frameBuf);
+  drawCornersFull();
+  display.writeBufferDMA((uint8_t *)frameBuf, VIDEO_W * VIDEO_H * 2);
+#else
   display.writeBufferDMA((uint8_t *)STORAGE_ERROR_SPLASH, VIDEO_W * VIDEO_H * 2);
+#endif
 }
 
 void  displayNoVideosFound() {
   dbgPrint("No Videos Found!");
   waitForScreenDMA();
-  display.endTransfer();
-  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
-  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
-  display.startData();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W - 1, VIDEO_H - 1);
+#if DOUBLE_BUFFER
+  memcpy((uint8_t*)frameBuf, (uint8_t*)FILE_NOT_FOUND_SPLASH, VIDEO_W * VIDEO_H * 2);
+  newJPEGFrameSize(VIDEO_W, VIDEO_H);
+  screenBuffer.setWidth(VIDEO_W);
+  screenBuffer.setBuffer((uint8_t *)frameBuf);
+  drawCornersFull();
+  display.writeBufferDMA((uint8_t *)frameBuf, VIDEO_W * VIDEO_H * 2);
+#else
   display.writeBufferDMA((uint8_t *)FILE_NOT_FOUND_SPLASH, VIDEO_W * VIDEO_H * 2);
+#endif
 }
 
 #ifdef has_USB_MSC
 void displayUSBMSCmessage() {
-#ifdef TinyTVMini
-  display.setCursor(5, 10);
-  display.print("USB Mode");
-  display.setCursor(5, 20);
-  display.print("Eject or");
-  display.setCursor(5, 30);
-  display.print("disconnect");
-  display.setCursor(5, 40);
-  display.print("to continue");
-  writeToScreenDMA(frameBuf, VIDEO_W * VIDEO_H);
-#else
-  //  display.setCursor(85 + 24, 45);
-  //  display.print("USB Mode");
-  //  display.setCursor(85 + 24, 55);
-  //  display.print("Eject or");
-  //  display.setCursor(85 + 24, 65);
-  //  display.print("disconnect");
-  //  display.setCursor(85 + 24, 75);
-  //  display.print("to continue");
   waitForScreenDMA();
-  display.endTransfer();
-  display.setX(VIDEO_X, VIDEO_X + VIDEO_W - 1);
-  display.setY(VIDEO_Y, VIDEO_Y + VIDEO_H - 1);
-  display.startData();
+  setScreenAddressWindow(VIDEO_X, VIDEO_Y, VIDEO_W - 1, VIDEO_H - 1);
+#if DOUBLE_BUFFER
+  memcpy((uint8_t*)frameBuf, (uint8_t*)MASS_STORAGE_SPLASH, VIDEO_W * VIDEO_H * 2);
+  newJPEGFrameSize(VIDEO_W, VIDEO_H);
+  screenBuffer.setWidth(VIDEO_W);
+  screenBuffer.setBuffer((uint8_t *)frameBuf);
+  drawCornersFull();
+  display.writeBufferDMA((uint8_t *)frameBuf, VIDEO_W * VIDEO_H * 2);
+#else
   display.writeBufferDMA((uint8_t *)MASS_STORAGE_SPLASH, VIDEO_W * VIDEO_H * 2);
 #endif
 }

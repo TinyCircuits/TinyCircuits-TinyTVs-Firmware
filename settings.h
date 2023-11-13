@@ -18,7 +18,7 @@ bool liveMode = true;
 bool doStaticEffects = true;
 bool showChannelNumber = true;
 bool showVolumeBar = true;
-int powerTimeoutSecs = 2 * 60;
+int powerTimeoutSecs = 5 * 60;
 bool randStartTime = true;
 bool randStartChan = false;
 
