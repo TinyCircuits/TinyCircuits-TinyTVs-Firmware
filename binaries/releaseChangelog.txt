@@ -1,3 +1,7 @@
+1.2.2
+*Update AVI file RIFF parsing to handle skipping to arbitrary timestamp in files >1GB
+*Allow a second attempt at SD card intialization
+
 1.2.1
 *Add setting for powerdown timeout
 *Add setting for random video start time
