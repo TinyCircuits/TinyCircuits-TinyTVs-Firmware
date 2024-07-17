@@ -166,7 +166,11 @@ int initializeSDcard() {
   SPI.setCS(SD_CS);
   SPI.begin(true);  //check argument?
 
-  return sd.cardBegin(SD_CONFIG);
+  int error = sd.cardBegin(SD_CONFIG);
+  if(!error){
+    error = sd.cardBegin(SD_CONFIG);
+  }
+  return error;
 }
 
 

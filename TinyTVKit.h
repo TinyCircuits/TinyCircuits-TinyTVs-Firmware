@@ -151,7 +151,12 @@ const SdSpiConfig SD_CONFIG(SD_CS, DEDICATED_SPI, min(F_CPU / 4, 50000000), &cus
 int initializeSDcard() {
   // Set SPI up and make sure the SD card is working
   SPI.begin();
-  return sd.cardBegin(SD_CONFIG);
+  
+  int error = sd.cardBegin(SD_CONFIG);
+  if(!error){
+    error = sd.cardBegin(SD_CONFIG);
+  }
+  return error;
 }
 
 
