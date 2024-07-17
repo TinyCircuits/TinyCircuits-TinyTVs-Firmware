@@ -19,6 +19,10 @@ bool videoStreamReadyTSV = false;
 uint64_t tsMillisInitial = 0;
 uint32_t currentAudioRate = 0;
 uint64_t millisOffset = 0;
+uint32_t aviRIFFSize = 0;
+int aviMoviListCount = 0;
+int aviMoviListPos = 0;
+uint32_t aviMoviListOffsets[5];
 
 void setMillisOffset(uint64_t val) {
   millisOffset = val;
@@ -32,11 +36,9 @@ uint32_t getInt(uint8_t * intOffset) {
 }
 
 int readNextChunk(uint8_t * dest, int maxLen) {
-
   int chunkLen = nextChunkLength();
   int chunkRead = 0;
   chunkRead = infile.read(dest, min(chunkLen, maxLen));
-
 
   if (chunkLen != chunkRead) {
     dbgPrint("chunkskip ");
@@ -74,8 +76,192 @@ bool isNextChunkAudio() {
   return strncmp((char *)nextChunkTag + 0, "01wb", 4) == 0;
 }
 
+bool isNextChunkIndex() {
+  return strncmp((char *)nextChunkTag + 0, "ix0", 3) == 0;//ix00,ix01
+}
+
 int nextChunkLength() {
   return getInt(nextChunkTag + 4);
+}
+
+void printHex(uint8_t * toPrint, int count) {
+  String hex = "";
+  for (int i = 0; i < count; i++) {
+    hex += String(toPrint[i], HEX) + " ";
+  }
+  dbgPrint(hex);
+  String ascii = "";
+  for (int i = 0; i < count; i++) {
+    ascii += String((char)toPrint[i]) + " ";
+  }
+  dbgPrint(ascii);
+}
+
+int jumpToNextMoviList() {
+  /*// the hard way..
+    aviMoviListPos++;
+    if (aviMoviListPos < aviMoviListCount) {
+    uint32_t framesToSkip = 0;
+    uint32_t moviListStart = 0;
+    uint32_t moviListOffset = 0;
+    // Offset points to ix00 chunk name 4 bytes, first uint32 is length of ix00 chunk, next uint32 & 0x0000FFFF = wLongsPerEntry which should be 2
+    // The next uint32 is number of entries, next 4 bytes are id, next uint64 is base offset, next 4 bytes reserved, then index data.
+    // Index entries are 32 bit offset in file, 32 bit size
+    infile.seekSet(aviMoviListOffsets[aviMoviListPos]);
+    uint8_t chunkData[32];
+    if (infile.read(chunkData, 32) != 32) {
+      return 1;
+    }
+    if (strncmp((char *)chunkData + 0, "ix00", 4) == 0) {
+      moviListStart = getInt(chunkData + 20);
+      dbgPrint("moviListStart = " + String(moviListStart, HEX));
+      infile.seekCur(framesToSkip * 8);
+      if (infile.read(chunkData, 4) != 4) {
+        return 1;
+      }
+      moviListOffset = getInt(chunkData);
+      dbgPrint("moviListOffset = " + String(moviListOffset, HEX));
+      dbgPrint("moviListStart + moviListOffset = " + String(moviListStart + moviListOffset, HEX));
+      moviListOffset -= 8;//point to chunk header
+    }
+    int timer2 = millis();
+    infile.seekSet(moviListStart + moviListOffset);
+    infile.read(nextChunkTag, 8);
+    dbgPrint("seek time " + String(millis() - timer2));
+    }*/
+  dbgPrint("indexChunk");
+  printHex(nextChunkTag, 8);
+  skipChunk();//video index
+  if (isNextChunkIndex()) {
+    printHex(nextChunkTag, 8);
+    skipChunk();//audio index
+  }
+  printHex(nextChunkTag, 8);
+  if (strncmp((char *)nextChunkTag + 0, "idx1", 4) == 0) { // followed by AVIX size
+    skipChunk();//audio index
+    printHex(nextChunkTag, 8);
+  }
+  if (strncmp((char *)nextChunkTag + 0, "RIFF", 4) == 0) { // followed by AVIX size
+    uint8_t chunkData[16] = {0};
+    if (infile.read(chunkData, 16) != 16) {
+      return 1;
+    }
+    printHex(chunkData, 16);
+    if (strncmp((char *)chunkData + 0, "AVIXLIST", 8) == 0) { //followed by movi list size
+      if (strncmp((char *)chunkData + 12, "movi", 4) == 0) { //followed by video data chunks
+        infile.read(nextChunkTag, 8);
+        printHex(nextChunkTag, 8);
+        return 0;
+      }
+    }
+  }
+  return 1;
+}
+
+int skipToFrameAVI1_0(uint32_t MOVIsize, uint32_t framesToSkip) {
+  uint32_t moviListStart = infile.curPosition();// + 8;
+  uint32_t moviListOffset = 0;
+  uint8_t chunkHeader[12];
+  infile.seekCur(MOVIsize - 4);
+  if (infile.read(chunkHeader, 8) != 8) {
+    return 1;
+  }
+  if (strncmp((char *)chunkHeader, "idx1", 4) == 0) {
+    //skipBytes = getInt(chunkHeader + 4);
+    uint8_t *tempBuf = sharedBuffer;
+    int bufPos = 0;
+    //Takes too long to actually read the whole index table, see how many KB can be skipped
+    int framesPerKB = 0;
+    if (infile.read(tempBuf, 1024) != 1024) {
+      return 1;
+    }
+    while (bufPos < 1024) {
+      if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
+        framesPerKB++;
+      }
+      bufPos += 16;
+    }
+    framesToSkip -= framesPerKB;
+    int KBtoSkip = framesToSkip / framesPerKB;
+    infile.seekCur(KBtoSkip * 1024);
+    framesToSkip -= (KBtoSkip * framesPerKB);
+    if (framesToSkip < 1)framesToSkip = 1;
+
+    //continue with 'exact' frame counting
+    int unrecognizedChunk = 0;
+    while (framesToSkip && unrecognizedChunk < 5) {
+      bufPos = 0;
+      int bytesRead = infile.read(tempBuf, 512);
+      if (bytesRead != 512) {
+        dbgPrint("error reading idx1");
+        //don't error out, just use last found moviListOffset?
+        //return 1;
+        framesToSkip = 0;
+      }
+      while (framesToSkip && bufPos < bytesRead && unrecognizedChunk < 5) {
+        if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
+          unrecognizedChunk = 0;
+          framesToSkip--;
+          moviListOffset = getInt(tempBuf + bufPos + 8);
+        } else {
+          if (strncmp((char *)tempBuf + bufPos, "01wb", 4) == 0) {
+            unrecognizedChunk = 0;
+          } else {
+            unrecognizedChunk++;
+          }
+        }
+        bufPos += 16;
+      }
+      dbgPrint(String(framesToSkip));
+    }
+    if (unrecognizedChunk >= 5) {
+      dbgPrint("Error reading idx1 chunk");
+      moviListOffset = 0;
+    }
+    moviListOffset -= 4; //moviListStart already has first tag
+  } else {
+    dbgPrint("idx1 not at expected position");
+  }
+  infile.seekSet(moviListStart + moviListOffset);
+  return 0;
+}
+
+int skipToFrameAVI2_0(uint32_t framesToSkip, uint32_t * aviMoviListFrameCount) {
+  dbgPrint("framesToSkip: " + String(framesToSkip));
+  uint32_t moviListStart = infile.curPosition();// + 8;
+  uint32_t moviListOffset = 0;
+  int baseOffsetToUse = 0;
+  while (baseOffsetToUse < aviMoviListCount && framesToSkip > aviMoviListFrameCount[baseOffsetToUse]) {
+    framesToSkip -= aviMoviListFrameCount[baseOffsetToUse];
+    aviMoviListPos++;
+    baseOffsetToUse++;
+  }
+  // Offset points to ix00 chunk name 4 bytes, first uint32 is length of ix00 chunk, next uint32 & 0x0000FFFF = wLongsPerEntry which should be 2
+  // The next uint32 is number of entries, next 4 bytes are id, next uint64 is base offset, next 4 bytes reserved, then index data.
+  // Index entries are 32 bit offset in file, 32 bit size
+  int timer2 = millis();
+  infile.seekSet(aviMoviListOffsets[aviMoviListPos]);
+  dbgPrint("seek time " + String(millis() - timer2));
+  uint8_t chunkData[32];
+  if (infile.read(chunkData, 32) != 32) {
+    return 1;
+  }
+  if (strncmp((char *)chunkData + 0, "ix00", 4) == 0) {
+    moviListStart = getInt(chunkData + 20);
+    dbgPrint("moviListStart = " + String(moviListStart, HEX));
+    timer2 = millis();
+    infile.seekCur(framesToSkip * 8);
+    if (infile.read(chunkData, 4) != 4) {
+      return 1;
+    }
+    dbgPrint("seek time " + String(millis() - timer2));
+    moviListOffset = getInt(chunkData);
+    dbgPrint("moviListOffset = " + String(moviListOffset, HEX));
+    dbgPrint("moviListStart + moviListOffset = " + String(moviListStart + moviListOffset, HEX));
+    moviListOffset -= 8;//point to chunk header
+  }
+  infile.seekSet(moviListStart + moviListOffset);
+  return 0;
 }
 
 int getVideoInfo(int startTimeOffsetS) {
@@ -85,10 +271,25 @@ int getVideoInfo(int startTimeOffsetS) {
   uint32_t frameRate = 0;
   uint32_t totalFrames = 0;
   bool isMJPG = false;
+  aviMoviListCount = 0;
+  aviMoviListPos = 0;
+  uint32_t aviMoviListFrameCount[5];
+  aviRIFFSize = 0;
+
+  if (infile.read(chunkHeader, 12) != 12) {
+    return 1;
+  }
+  // Make sure we can parse it
+  if ((strncmp((char *)chunkHeader + 0, "RIFF", 4)) || (strncmp((char *)chunkHeader + 8, "AVI ", 4))) {
+    dbgPrint("Infile is not a RIFF AVI file");
+    return 1;
+  }
+  aviRIFFSize = getInt(chunkHeader + 4);
+  dbgPrint("aviRIFFSize = " + String(aviRIFFSize));
+
   while (chunkCount < 50) {
     //Read the next chunk/list header
-    if (infile.read(chunkHeader, 12) != 12)
-    {
+    if (infile.read(chunkHeader, 12) != 12) {
       return 1;
     }
 
@@ -136,75 +337,52 @@ int getVideoInfo(int startTimeOffsetS) {
       }
     }
 
+    if (strncmp((char *)chunkHeader + 0, "indx", 4) == 0) {
+      // in indx chunk, first uint32 is length, next uint32 & 0x0000FFFF = wLongsPerEntry should be 4. These are already in chunkHeader
+      // Next data is uint32 = number of entries in index, next 32 bits for type(00dc for video), 12 reserved bytes, then index data.
+      // Each entry is a uint64 for offset in file(absolute) of chunk, uint32 size, uint32 duration(duration = video 'ticks'? = assumed frames)
+      // We're bad and assume the offset fits into uint32_t, we have a 4GB file size limit due to filesystem anyway.
+      const int bytes = 4 + 4 + 12 + (5 * 16);
+      uint8_t chunkData[20];
+      if (infile.read(chunkData, 20) != 20) {
+        return 1;
+      }
+      skipBytes -= 20;
+      if (strncmp((char *)chunkData + 4, "00dc", 4) == 0) {
+        uint32_t entryCount = getInt(chunkData + 0);
+        dbgPrint("entryCount = " + String(entryCount));
+        dbgPrint("In indx header with 00dc type");
+        if (entryCount > 5)// This should be a safe assumtion with 4GB max file size.
+          entryCount = 5;
+        for (int i = 0; i < entryCount; i++) {
+          if (infile.read(chunkData, 16) != 16) {
+            return 1;
+          }
+          skipBytes -= 16;
+          dbgPrint("offset = " + String(getInt(chunkData + 0), HEX) + " duration = " + String(getInt(chunkData + 12)));
+          aviMoviListOffsets[aviMoviListCount] = getInt(chunkData + 0);
+          aviMoviListFrameCount[aviMoviListCount] = getInt(chunkData + 12);
+          aviMoviListCount++;
+        }
+      }
+    }
+
     if (strncmp((char *)chunkHeader + 8, "movi", 4) == 0) {
       dbgPrint("Found movi list, ready to stream?");
       skipBytes = getInt(chunkHeader + 4);
       dbgPrint(String(skipBytes));
-      int moviListStart = infile.curPosition();// + 8;
-      int moviListOffset = 0;
-      int timer = millis();
-      if (startTimeOffsetS > 0) {
-        infile.seekCur(skipBytes - 4);
-        if (infile.read(chunkHeader, 8) != 8) {
-          return 1;
-        }
-        if (strncmp((char *)chunkHeader, "idx1", 4) == 0) {
-          skipBytes = getInt(chunkHeader + 4);
-          dbgPrint("Found idx1, size: " + String(skipBytes));
-          int framesToSkip = startTimeOffsetS * frameRate;
-          framesToSkip = framesToSkip % totalFrames;
-          uint8_t *tempBuf = sharedBuffer;
-          int bufPos = 0;
-
-          //Takes too long to actually read the whole index table, see how many KB can be skipped
-          int framesPerKB = 0;
-          if (infile.read(tempBuf, 1024) != 1024) {
-            return 1;
-          }
-          while (bufPos < 1024) {
-            if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
-              framesPerKB++;
-            }
-            bufPos += 16;
-          }
-          framesToSkip -= framesPerKB;
-          int KBtoSkip = framesToSkip / framesPerKB;
-          //need to test this..
-          //          while (KBtoSkip * 1024 > skipBytes - 1024) {
-          //            KBtoSKip--;
-          //          }
-          dbgPrint(String(framesPerKB));
-          dbgPrint(String(KBtoSkip));
-          infile.seekCur(KBtoSkip * 1024);
-          framesToSkip -= (KBtoSkip * framesPerKB);
-          if (framesToSkip < 1)framesToSkip = 1;
-
-          //continue with 'exact' frame counting
-          while (framesToSkip) {
-            bufPos = 0;
-            int bytesRead = infile.read(tempBuf, 512);
-            if (bytesRead != 512) {
-              dbgPrint("error reading idx1");
-              //don't error out, just use last found moviListOffset?
-              //return 1;
-              framesToSkip = 0;
-            }
-            while (framesToSkip && bufPos < bytesRead) {
-              if (strncmp((char *)tempBuf + bufPos, "00dc", 4) == 0) {
-                framesToSkip--;
-                moviListOffset = getInt(tempBuf + bufPos + 8);
-              }
-              bufPos += 16;
-            }
-            dbgPrint(String(framesToSkip));
-          }
-
+      dbgPrint(String("sizeof: ") + String(sizeof(infile)));
+      int framesToSkip = (startTimeOffsetS * frameRate) % totalFrames;
+      if (framesToSkip > 0) {
+        int timer = millis();
+        //aviMoviListCount = 0;
+        if (aviMoviListCount) { // AVI 2.0
+          skipToFrameAVI2_0(framesToSkip, aviMoviListFrameCount);
           dbgPrint("skip time " + String(millis() - timer));
-          moviListOffset -= 4; //moviListStart already has first tag
-        } else {
-          dbgPrint("idx1 not at expected position");
+        } else {// Use legacy index
+          skipToFrameAVI1_0(skipBytes, framesToSkip);
         }
-        infile.seekSet(moviListStart + moviListOffset);
+        dbgPrint("skip time " + String(millis() - timer));
       }
 
       if (isMJPG && frameRate) {
@@ -280,16 +458,6 @@ int startVideo(const char* n, int startTimeS) {
   memset(fileName, 0, 13);
   infile.getSFN(fileName, 13);
   if (!strcmp(fileName + strlen(fileName) - 4, ".avi") || !strcmp(fileName + strlen(fileName) - 4, ".AVI")) {
-    char fileHeader[12] = {0};
-    if (infile.read(fileHeader, 12) != 12) {
-      dbgPrint("Video read error");
-      return 1;
-    }
-    // Make sure we can parse it
-    if ((strncmp((char *)fileHeader + 0, "RIFF", 4)) || (strncmp((char *)fileHeader + 8, "AVI ", 4))) {
-      dbgPrint("Infile is not a RIFF AVI file");
-      return 2;
-    }
     if (getVideoInfo(startTimeS)) {
       dbgPrint("Error finding stream info or read error");
       return 3;
@@ -318,9 +486,9 @@ int startVideoByChannel(int channelNum) {
     channelNumber = aviCount;
   }
 
-  dbgPrint("Playing " + String(aviList[channelNumber-1]) + " Channel # is " + String(channelNumber));
+  dbgPrint("Playing " + String(aviList[channelNumber - 1]) + " Channel # is " + String(channelNumber));
 
-  if (startVideo(aviList[channelNumber-1], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
+  if (startVideo(aviList[channelNumber - 1], liveMode ? (millis() + millisOffset) / 1000 : 0)) {
     return 1;
   }
   return 0;

@@ -145,7 +145,7 @@ void initVideoPlayback(bool loadSettingsFile) {
   if (videoCount) {
     showNoVideoError = false;
     if (randStartChan) {
-      channelNumber = random(videoCount)+1;
+      channelNumber = random(videoCount) + 1;
       inputFlags.settingsChanged = true;
     }
     if (startVideoByChannel(channelNumber)) {
@@ -277,14 +277,14 @@ void loop() {
     inputFlags.channelUp = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
-      if (doStaticEffects) {
-        drawStaticFor(staticTimeMS);
-        playStaticFor(staticTimeMS);
-      }
       if (nextVideo()) {
         nextVideoError = millis();
       } else {
         nextVideoError = 0;
+        if (doStaticEffects) {
+          drawStaticFor(staticTimeMS);
+          playStaticFor(staticTimeMS);
+        }
         setAudioSampleRate(getVideoAudioRate());
         drawChannelNumberFor(1000);
       }
@@ -295,14 +295,14 @@ void loop() {
     inputFlags.channelDown = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
-      if (doStaticEffects) {
-        drawStaticFor(staticTimeMS);
-        playStaticFor(staticTimeMS);
-      }
       if (prevVideo()) {
         prevVideoError = millis();
       } else {
         prevVideoError = 0;
+        if (doStaticEffects) {
+          drawStaticFor(staticTimeMS);
+          playStaticFor(staticTimeMS);
+        }
         setAudioSampleRate(getVideoAudioRate());
         drawChannelNumberFor(1000);
       }
@@ -312,14 +312,14 @@ void loop() {
     inputFlags.channelSet = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
-      if (doStaticEffects) {
-        drawStaticFor(staticTimeMS);
-        playStaticFor(staticTimeMS);
-      }
       if (startVideoByChannel(channelNumber)) {
         nextVideoError = millis();
       } else {
         nextVideoError = 0;
+        if (doStaticEffects) {
+          drawStaticFor(staticTimeMS);
+          playStaticFor(staticTimeMS);
+        }
         setAudioSampleRate(getVideoAudioRate());
         drawChannelNumberFor(1000);
       }
@@ -419,6 +419,17 @@ void loop() {
           totalTime += t1;
 
         }
+      } else if (isNextChunkIndex()) {
+        if (jumpToNextMoviList()) {
+          dbgPrint("jumpToNextMoviList error");
+          if (loopVideo == false) {
+            nextVideo();
+            setAudioSampleRate(getVideoAudioRate());
+            drawChannelNumberFor(1000);
+          } else {
+            startVideo("", 0);
+          }
+        }
       } else {
         dbgPrint("chunk unrecognized ");
         dbgPrint(String(len));
@@ -453,7 +464,7 @@ void loop() {
     }
   } else if (isTSVStreamAvailable()) {
     if (frameWaitDurationElapsed()) {
-      newJPEGFrameSize(VIDEO_W,VIDEO_H);
+      newJPEGFrameSize(VIDEO_W, VIDEO_H);
       JPEGDRAW jd;
       jd.x = 0;
       jd.y = 0;
@@ -520,7 +531,7 @@ void loop() {
       //dbgPrint(String(audioSamplesInBuffer()));
       if (getVideoAudioRate() && audioSamplesInBuffer() < 200) {
         skipNextFrame = true;
-        dbgPrint("Setting frameskip true, buffer is behind!");
+        //dbgPrint("Setting frameskip true, buffer is behind!");
       } else {
         skipNextFrame = false;
       }
@@ -531,7 +542,7 @@ void loop() {
   if (!live) {
     if (getVideoAudioRate() && audioSamplesInBuffer() < 200) {
       skipNextFrame = true;
-      dbgPrint("Setting frameskip true, buffer is behind!");
+      //dbgPrint("Setting frameskip true, buffer is behind!");
     } else {
       skipNextFrame = false;
     }
