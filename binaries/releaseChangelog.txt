@@ -1,3 +1,6 @@
+1.2.3
+*Fix "wrong diskette is in the drive" error during file upload
+
 1.2.2
 *Update AVI file RIFF parsing to handle skipping to arbitrary timestamp in files >1GB
 *Allow a second attempt at SD card intialization
