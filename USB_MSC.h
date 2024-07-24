@@ -63,7 +63,16 @@ int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
     return bufsize;
   } else if (/*!ejected*/ 1) {
     lastMSCWrite = millis();
-    return sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512) ? bufsize : -1;
+    bool writeSuccess = sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512);
+    int errorCount = 0;
+    while (writeSuccess == false && errorCount < 3) {
+      if (!sd.cardBegin(SD_CONFIG)) {
+        // SD card not responding, break out of loop and report error
+      }
+      writeSuccess = sd.card()->writeSectors(lba * sectorLBACount, buffer, bufsize / 512);
+      errorCount++;
+    }
+    return writeSuccess ? bufsize : -1;
   }
   return 0;
 }
@@ -162,10 +171,10 @@ bool USBMSCJustStopped() {
   return false;
 }
 
-bool USBMSCRecentActivity(){
-  if( millis()- lastMSCRead < 500)
+bool USBMSCRecentActivity() {
+  if (millis() - lastMSCRead < 500)
     return true;
-  if( millis()- lastMSCWrite < 500)
+  if (millis() - lastMSCWrite < 500)
     return true;
   return false;
 }
