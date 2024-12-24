@@ -21,6 +21,7 @@ bool showVolumeBar = true;
 int powerTimeoutSecs = 5 * 60;
 bool randStartTime = true;
 bool randStartChan = false;
+bool roundedCorners = true;
 
 //#define cdc SerialUSB
 bool timeStamp = false;
@@ -41,6 +42,7 @@ const char keyNames[][15] = {
 #endif
   "randStartTime",
   "randStartChan",
+  "roundedCorners",
 }; //showTime?
 
 String getKeyValue(String key) {
@@ -61,10 +63,12 @@ String getKeyValue(String key) {
   if (key == String("powerOffSecs")) return String(powerTimeoutSecs);
   if (key == String("randStartTime")) return String(randStartTime ? "true" : "false");
   if (key == String("randStartChan")) return String(randStartChan ? "true" : "false");
+  if (key == String("roundedCorners")) return String(roundedCorners ? "true" : "false");
   return "none";
 }
 
 void saveSettings() {
+  dbgPrint("saveSettings()");
   File32 settingsFile;
   settingsFile.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   for (int i = 0; i < sizeof(keyNames) / sizeof(keyNames[0]); i++) {
@@ -99,6 +103,7 @@ bool setValueByKey(String key, String val) {
   else if (key == String("powerOffSecs")) powerTimeoutSecs = max(3,val.toInt());
   else if (key == String("randStartTime")) randStartTime = (val == (String)"true") ? true : false;
   else if (key == String("randStartChan")) randStartChan = (val == (String)"true") ? true : false;
+  else if (key == String("roundedCorners")) roundedCorners = (val == (String)"true") ? true : false;
   else return false;
   return true;
 }

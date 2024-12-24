@@ -146,7 +146,6 @@ void initVideoPlayback(bool loadSettingsFile) {
     showNoVideoError = false;
     if (randStartChan) {
       channelNumber = random(videoCount) + 1;
-      inputFlags.settingsChanged = true;
     }
     if (startVideoByChannel(channelNumber)) {
       nextVideoError = millis();
@@ -164,7 +163,6 @@ void initVideoPlayback(bool loadSettingsFile) {
 }
 
 void loop() {
-
 #ifdef has_USB_MSC
   if (USBJustConnected() && !live) {
     setAudioSampleRate(100);
@@ -178,7 +176,6 @@ void loop() {
     }
     displayUSBMSCmessage();
   }
-  //if (!live) {
   if (handleUSBMSC(powerButtonPressed())) {
     //USBMSC active, handle CDC commands except for filling frames:
     uint16_t totalJPEGBytesUnused;
@@ -191,14 +188,18 @@ void loop() {
     }
     return;
   }
-  //}
   if (USBMSCJustStopped()) {
+    dbgPrint("MSC Stopped");
     for (int i = 0; i < 50; i++) {
       delay(1); yield();
     }
     //USBMSC ejected, return to video playback:
     clearPowerButtonPressInt();
-    initVideoPlayback(false);
+    if (inputFlags.settingsChanged) {
+      inputFlags.settingsChanged = false;
+      saveSettings();
+    }
+    initVideoPlayback(true);
   }
 #endif
 
