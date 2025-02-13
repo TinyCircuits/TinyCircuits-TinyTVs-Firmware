@@ -2,12 +2,8 @@
 #include "../debug/debug.h"
 
 
-DisplayUnix::DisplayUnix(uint16_t width, uint16_t height){
+DisplayUnix::DisplayUnix(uint16_t width, uint16_t height) : DisplayBase(width, height){
     debug_println("Display Unix");
-
-    // Store these
-    width = width;
-    height = height;
 
     // https://dev.to/noah11012/using-sdl2-opening-a-window-79c
     // Init SDL
@@ -34,9 +30,6 @@ DisplayUnix::DisplayUnix(uint16_t width, uint16_t height){
 
     // Increase window size
     SDL_SetWindowSize(window, width*3, height*3);
-
-    // Update the screen once
-    update();
 }
 
 
@@ -65,13 +58,8 @@ DisplayUnix::~DisplayUnix(){
 
 
 void DisplayUnix::write(uint16_t *buffer, uint32_t buffer_len){
-    
-}
-
-
-void DisplayUnix::update(){
-    SDL_UpdateTexture(window_frame_buffer , NULL, buffer, width*sizeof(uint16_t));
-    SDL_RenderClear(window_renderer);
-    SDL_RenderCopy(window_renderer, window_frame_buffer, NULL, NULL);
-    SDL_RenderPresent(window_renderer);
+    // SDL_UpdateTexture(window_frame_buffer, NULL, buffer, width*sizeof(uint16_t));
+    // SDL_RenderClear(window_renderer);
+    // SDL_RenderCopy(window_renderer, window_frame_buffer, NULL, NULL);
+    // SDL_RenderPresent(window_renderer);
 }
