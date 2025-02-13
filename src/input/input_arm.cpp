@@ -7,7 +7,7 @@ InputArm::InputArm(){
 
 
 InputArm::~InputArm(){
-
+    pressed = 0;
 }
 
 
