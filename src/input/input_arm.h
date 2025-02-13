@@ -1,13 +1,12 @@
 #ifndef INPUT_ARM_H
 #define INPUT_ARM_H
 
+#include "input_base.h"
 #include <stdint.h>
 
-class InputArm{
+class InputArm : public InputBase{
     public:
-        InputArm(uint8_t lencoder_pin_a, uint8_t lencoder_pin_b, uint8_t rencoder_pin_a, uint8_t rencoder_pin_b, uint8_t pwr_btn_pin, uint8_t pwr_btn_off_pin, uint8_t ir_pin);                // TV2
-        InputArm(uint8_t lbtn_pin, uint8_t rbtn_pin, uint8_t pwr_btn_pin, uint8_t pwr_btn_off_pin, uint8_t ir_pin);                                                                            // TVMini
-        InputArm(uint8_t lside_top_btn_pin, uint8_t lside_bot_btn_pin, uint8_t rside_top_btn_pin, uint8_t rside_bot_btn_pin, uint8_t pwr_btn_pin, uint8_t pwr_btn_off_pin, uint8_t ir_pin);    // TVKit
+        InputArm(tv_pins_t *pins);
         ~InputArm();
 
         void poll();

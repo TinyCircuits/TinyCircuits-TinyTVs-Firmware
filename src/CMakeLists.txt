@@ -15,6 +15,7 @@ add_executable(tinytv
     files/files_unix.cpp        # Files library
     display/display_base.cpp    # Display library
     display/display_unix.cpp    # Display library
+    input/input_base.cpp        # Files library
     input/input_unix.cpp        # Files library
 )
 
