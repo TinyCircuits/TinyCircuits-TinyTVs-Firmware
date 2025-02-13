@@ -6,6 +6,7 @@
 #include "display/display.h"
 #include "tinytv.h"
 #include "input/input.h"
+#include "demuxer/demuxer.h"
 #include "config.h"
 
 // https://wiki.libsdl.org/SDL2/SDLKeycodeLookup
@@ -31,10 +32,13 @@ Files files(100, 150);
 Display display(128, 128);
 TinyTV tv(&files, &display);
 Input input(&pins);
+Demuxer demuxer(&files);
 
 
 int main(int argc, char *argv[]){
     debug_init();
+
+    demuxer.begin();
 
     while(true){
         input.poll();
@@ -45,8 +49,10 @@ int main(int argc, char *argv[]){
 
         if(input.is_next_channel_pressed()){
             files.next();
+            demuxer.begin();
         }else if(input.is_prev_channel_pressed()){
             files.prev();
+            demuxer.begin();
         }
 
         if(input.is_vol_up_pressed()){

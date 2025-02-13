@@ -17,6 +17,7 @@ add_executable(tinytv
     display/display_unix.cpp    # Display library
     input/input_base.cpp        # Files library
     input/input_unix.cpp        # Files library
+    demuxer/demuxer.cpp         # Container demuxer audio/video library
 )
 
 target_link_libraries(tinytv PRIVATE -lSDL2)

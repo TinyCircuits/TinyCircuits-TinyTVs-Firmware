@@ -21,21 +21,22 @@ class FilesBase{
         // Also handles closing previous files first
         virtual void prev() = 0;    // `= 0`, pure, must be implemented by derived class
 
-        // Read up to `size` or `count` bytes into
-        // `output` and return number of bytes read
-        virtual size_t read(uint8_t *output, size_t size, uint32_t count) = 0; // `= 0`, pure, must be implemented by derived class
+        // Read up to `count` bytes into `output`
+        // and return number of bytes actually read
+        virtual ssize_t read_video(uint8_t *output, uint32_t count) = 0; // `= 0`, pure, must be implemented by derived class
 
         // Move file cursor to `offset` relative to whence:
         //  * `SEEK_SET`: Move to position in file relative to start of file
         //  * `SEEK_CUR`: Move to position in file relative to current position in file
         //  * `SEEK_END`: Move to position in file relative to end of file
-        virtual void seek(long offset, int whence) = 0;      // `= 0`, pure, must be implemented by derived class
+        // Return location in the file after seeking
+        virtual off_t seek_video(long offset, int whence) = 0;      // `= 0`, pure, must be implemented by derived class
     private:
         // Open the video at `video_index`
-        virtual void open(uint16_t video_index) = 0;    // `= 0`, pure, must be implemented by derived class
+        virtual void open_video(uint16_t video_index) = 0;    // `= 0`, pure, must be implemented by derived class
 
         // Close the currently open video file
-        virtual void close() = 0;                       // `= 0`, pure, must be implemented by derived class
+        virtual void close_video() = 0;                       // `= 0`, pure, must be implemented by derived class
 
         uint16_t max_video_count;   // Max number of videos that can be tracked    
         uint16_t path_len;          // Max length of video IDs/LFNs

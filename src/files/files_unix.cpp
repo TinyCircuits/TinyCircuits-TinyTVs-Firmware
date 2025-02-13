@@ -7,13 +7,15 @@
 #include <cstring>
 #include <iostream>
 #include <filesystem>
+#include <fcntl.h>
+#include <unistd.h>
 namespace fs = std::filesystem;
 
 FilesUnix::FilesUnix(uint16_t max_video_count, uint16_t path_name_len) : FilesBase(max_video_count, path_name_len){
     debug_println("Files Unix");
 
     // Set to default
-    open_file = NULL;
+    open_file = -1;
 
     std::string video_path = "../../videos";
 
@@ -37,53 +39,54 @@ FilesUnix::FilesUnix(uint16_t max_video_count, uint16_t path_name_len) : FilesBa
         video_count++;
     }
 
-    open(video_index);
+    open_video(video_index);
 }
 
 
 FilesUnix::~FilesUnix(){
-    close();
+    close_video();
 }
 
 
 void FilesUnix::next(){
     // Close current video
-    close();
+    close_video();
 
     // Handles `video_index` increment and loop
     FilesBase::next();
 
     // Open the next video
-    open(video_index);
+    open_video(video_index);
 }
 
 
 void FilesUnix::prev(){
     // Close current video
-    close();
+    close_video();
 
     // Handles `video_index` decrement and loop
     FilesBase::prev();
 
     // Open the prev video
-    open(video_index);
+    open_video(video_index);
 }
 
 
-size_t FilesUnix::read(uint8_t *output, size_t size, uint32_t count){
-    return fread(output, size, count, open_file);
+ssize_t FilesUnix::read_video(uint8_t *output, uint32_t count){
+    return read(open_file, output, count);
 }
 
 
-void FilesUnix::seek(long offset, int whence){
-    fseek(open_file, offset, whence);
+off_t FilesUnix::seek_video(long offset, int whence){
+    return lseek(open_file, offset, whence);
 }
 
 
-void FilesUnix::open(uint16_t video_index){
-    open_file = fopen(video_path_list[video_index], "r");
+void FilesUnix::open_video(uint16_t video_index){
+    // open_file = fopen(video_path_list[video_index], "r");
+    open_file = open(video_path_list[video_index], O_RDONLY);
 
-    if(open_file == NULL){
+    if(open_file == -1){
         debug_println("ERROR: Could not open file!");
     }
 
@@ -92,10 +95,10 @@ void FilesUnix::open(uint16_t video_index){
 }
 
 
-void FilesUnix::close(){
-    if(open_file){
-        fclose(open_file);
-        open_file = NULL;
+void FilesUnix::close_video(){
+    if(open_file != -1){
+        close(open_file);
+        open_file = -1;
 
         debug_println("SUCCESS: Closed file!");
         debug_println(video_path_list[video_index]);

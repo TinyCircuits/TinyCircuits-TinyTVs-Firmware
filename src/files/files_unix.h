@@ -12,13 +12,14 @@ class FilesUnix : public FilesBase{
 
         void next();
         void prev();
-        size_t read(uint8_t *output, size_t size, uint32_t count);
-        void seek(long offset, int whence);
+        ssize_t read_video(uint8_t *output, uint32_t count);
+        off_t seek_video(long offset, int whence);
     private:
-        void open(uint16_t video_index);
-        void close();
+        void open_video(uint16_t video_index);
+        void close_video();
 
-        FILE *open_file;
+        // Linux file descriptor
+        int open_file;
 };
 
 #endif
