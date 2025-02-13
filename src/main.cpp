@@ -42,6 +42,18 @@ int main(int argc, char *argv[]){
         if(input.is_power_pressed()){
             break;
         }
+
+        if(input.is_next_channel_pressed()){
+            files.next();
+        }else if(input.is_prev_channel_pressed()){
+            files.prev();
+        }
+
+        if(input.is_vol_up_pressed()){
+
+        }else if(input.is_vol_down_pressed()){
+            
+        }
     }
 
     // tv.processVideo();

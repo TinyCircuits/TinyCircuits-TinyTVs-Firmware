@@ -65,15 +65,16 @@ class InputBase{
         // Each of these return true when the respective TV
         // function is active. This can be due to a physical
         // button press or due to IR codes from a remote
-        bool is_power_pressed();
-        bool is_next_channel_pressed();
-        bool is_prev_channel_pressed();
-        bool is_vol_up_pressed();
-        bool is_vol_down_pressed();
+        bool is_power_pressed(bool check_just_pressed=true);
+        bool is_next_channel_pressed(bool check_just_pressed=true);
+        bool is_prev_channel_pressed(bool check_just_pressed=true);
+        bool is_vol_up_pressed(bool check_just_pressed=true);
+        bool is_vol_down_pressed(bool check_just_pressed=true);
     private:
     protected:
-        uint16_t pressed;   // TV functions pressed (channel, volume, power, etc.)
-        tv_pins_t *pins;    // Pins to use (contains TV type)
+        uint16_t last_pressed;  // Last TV functions pressed (channel, volume, power, etc.)
+        uint16_t pressed;       // TV functions pressed (channel, volume, power, etc.)
+        tv_pins_t *pins;        // Pins to use (contains TV type)
 };
 
 #endif

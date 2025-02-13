@@ -14,4 +14,24 @@ FilesArm::~FilesArm(){
 }
 
 
+void FilesArm::next(){
+
+}
+
+
+void FilesArm::prev(){
+
+}
+
+
+void FilesArm::read(uint8_t *output, size_t size, uint32_t count){
+
+}
+
+
+void FilesArm::seek(long offset, int whence){
+
+}
+
+
 #endif
