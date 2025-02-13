@@ -17,5 +17,10 @@ FilesBase::FilesBase(uint16_t max_video_count, uint16_t path_len){
 
 
 FilesBase::~FilesBase(){
+    // Free the allocated memory for file names
+    for (uint16_t i = 0; i < max_video_count; i++){
+        free(video_path_list[i]);
+    }
 
+    free(video_path_list);
 }
