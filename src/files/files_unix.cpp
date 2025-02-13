@@ -72,13 +72,22 @@ void FilesUnix::prev(){
 }
 
 
-ssize_t FilesUnix::read_video(uint8_t *output, uint32_t count){
+ssize_t FilesUnix::video_read(uint8_t *output, uint32_t count){
     return read(open_file, output, count);
 }
 
 
-off_t FilesUnix::seek_video(long offset, int whence){
+off_t FilesUnix::video_seek(long offset, int whence){
     return lseek(open_file, offset, whence);
+}
+
+
+off_t FilesUnix::video_size(){
+    // Get the size without messing up location in file (preserve it)
+    off_t offset = lseek(open_file, 0, SEEK_CUR);   // Get current location
+    off_t size   = lseek(open_file, 0, SEEK_END);   // Get size of file in bytee
+    lseek(open_file, offset, SEEK_SET);             // Restore location before getting size
+    return size;
 }
 
 

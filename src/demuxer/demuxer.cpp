@@ -66,7 +66,7 @@ bool Demuxer::check_for_avi(){
     uint8_t buffer[4];
 
     // First 4 bytes of file should be ASCII characters `RIFF`
-    files->read_video(buffer, 4);
+    files->video_read(buffer, 4);
 
     if(strncmp("RIFF", (const char*)buffer, 4) == 0){
         debug_println("SUCCESS: File contents indicate this is a .avi file!");
@@ -85,8 +85,8 @@ bool Demuxer::check_for_mov(){
 
     // After 4 atom size bytes, next 4 bytes should be ASCII `ftyp`
     // https://wiki.multimedia.cx/index.php?title=QuickTime_container#:~:text=tbd-,ftyp,-ftyp
-    files->seek_video(4, SEEK_SET);
-    files->read_video(buffer, 4);
+    files->video_seek(4, SEEK_SET);
+    files->video_read(buffer, 4);
 
     if(strncmp("ftyp", (const char*)buffer, 4) == 0){
         debug_println("SUCCESS: File contents indicate this is a .mov file!");

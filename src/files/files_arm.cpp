@@ -24,12 +24,17 @@ void FilesArm::prev(){
 }
 
 
-ssize_t FilesArm::read_video(uint8_t *output, size_t size){
+ssize_t FilesArm::video_read(uint8_t *output, size_t size){
     return 0;
 }
 
 
-off_t FilesArm::seek_video(long offset, int whence){
+off_t FilesArm::video_seek(long offset, int whence){
+    return 0;
+}
+
+
+off_t FilesArm::video_size(){
     return 0;
 }
 
