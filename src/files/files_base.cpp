@@ -5,8 +5,8 @@ FilesBase::FilesBase(uint16_t max_video_count, uint16_t path_len){
     debug_println("Files Base");
 
     // Store these
-    max_video_count = max_video_count;
-    path_len = path_len;
+    this->max_video_count = max_video_count;
+    this->path_len = path_len;
 
     // Allocate memory for list of file name IDs (SD cards have LFN names)
     video_path_list = (char **)malloc(max_video_count * sizeof(char *));

@@ -5,11 +5,11 @@
 #include <stdint.h>
 
 
-// #define INPUT_CODE_POWER        0b0000000000000001
-// #define INPUT_CODE_LKNOB_LEFT   0b0000000000000010
-// #define INPUT_CODE_LKNOB_RIGHT  0b0000000000000100
-// #define INPUT_CODE_RKNOB_LEFT   0b0000000000001000
-// #define INPUT_CODE_RKNOB_RIGHT  0b0000000000010000
+#define INPUT_FUNC_CODE_PWR         0b0000000000000001
+#define INPUT_FUNC_CODE_NEXT_CHAN   0b0000000000000010
+#define INPUT_FUNC_CODE_PREV_CHAN   0b0000000000000100
+#define INPUT_FUNC_CODE_VOL_UP      0b0000000000001000
+#define INPUT_FUNC_CODE_VOL_DOWN    0b0000000000010000
 
 
 // Unique pins for TV2
@@ -39,7 +39,6 @@ typedef struct input_t{
     uint8_t tv_type;
     
     uint8_t pwr_btn_pin;
-    uint8_t pwr_btn_off_pin;
     uint8_t ir_pin;
 
     union{
@@ -66,11 +65,11 @@ class InputBase{
         // Each of these return true when the respective TV
         // function is active. This can be due to a physical
         // button press or due to IR codes from a remote
-        virtual bool is_power_pressed()        = 0; // `= 0`, pure, must be implemented by derived class
-        virtual bool is_next_channel_pressed() = 0; // `= 0`, pure, must be implemented by derived class
-        virtual bool is_prev_channel_pressed() = 0; // `= 0`, pure, must be implemented by derived class
-        virtual bool is_vol_up_pressed()       = 0; // `= 0`, pure, must be implemented by derived class
-        virtual bool is_vol_down_pressed()     = 0; // `= 0`, pure, must be implemented by derived class
+        bool is_power_pressed();
+        bool is_next_channel_pressed();
+        bool is_prev_channel_pressed();
+        bool is_vol_up_pressed();
+        bool is_vol_down_pressed();
     private:
     protected:
         uint16_t pressed;   // TV functions pressed (channel, volume, power, etc.)

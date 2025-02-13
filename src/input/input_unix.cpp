@@ -15,30 +15,19 @@ InputUnix::~InputUnix(){
 
 
 void InputUnix::poll(){
+    static SDL_Event event;
 
-}
+    while(SDL_PollEvent(&event)){
+        int32_t code = event.key.keysym.sym;
 
-
-bool InputUnix::is_power_pressed(){
-    return false;
-}
-
-
-bool InputUnix::is_next_channel_pressed(){
-    return false;
-}
-
-
-bool InputUnix::is_prev_channel_pressed(){
-    return false;
-}
-
-
-bool InputUnix::is_vol_up_pressed(){
-    return false;
-}
-
-
-bool InputUnix::is_vol_down_pressed(){
-    return false;
+        if(event.type == SDL_KEYDOWN){
+            if(code == pins->pwr_btn_pin){
+                pressed |= INPUT_FUNC_CODE_PWR;
+            }
+        }else if(event.type == SDL_KEYUP){
+            if(code == pins->pwr_btn_pin){
+                pressed &= ~INPUT_FUNC_CODE_PWR;
+            }
+        }
+    }
 }

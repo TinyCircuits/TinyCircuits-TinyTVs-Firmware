@@ -12,8 +12,7 @@
 tv_pins_t pins = {
     .tv_type         = TV_TYPE_2,
     
-    .pwr_btn_pin     = 110, // n
-    .pwr_btn_off_pin = 111, // o
+    .pwr_btn_pin     = 111, // o
     .ir_pin          = 105, // i
 
     .unique = {
@@ -37,13 +36,13 @@ Input input(&pins);
 int main(int argc, char *argv[]){
     debug_init();
 
-    // while(true){
-    //     input.poll();
+    while(true){
+        input.poll();
 
-    //     if(input.is_power_pressed()){
-    //         break;
-    //     }
-    // }
+        if(input.is_power_pressed()){
+            break;
+        }
+    }
 
     // tv.processVideo();
     return 0;

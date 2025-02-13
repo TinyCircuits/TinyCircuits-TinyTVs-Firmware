@@ -10,12 +10,6 @@ class InputArm : public InputBase{
         ~InputArm();
 
         void poll();
-
-        bool is_power_pressed();
-        bool is_next_channel_pressed();
-        bool is_prev_channel_pressed();
-        bool is_vol_up_pressed();
-        bool is_vol_down_pressed();
     private:
         uint16_t pressed;
 };

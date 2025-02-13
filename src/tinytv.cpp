@@ -4,8 +4,8 @@
 TinyTV::TinyTV(Files *files, Display *display){
     debug_println("TinyTV");
 
-    files = files;
-    display = display;
+    this->files = files;
+    this->display = display;
 }
 
 

@@ -14,28 +14,3 @@ InputArm::~InputArm(){
 void InputArm::poll(){
 
 }
-
-
-bool InputArm::is_power_pressed(){
-    return false;
-}
-
-
-bool InputArm::is_next_channel_pressed(){
-    return false;
-}
-
-
-bool InputArm::is_prev_channel_pressed(){
-    return false;
-}
-
-
-bool InputArm::is_vol_up_pressed(){
-    return false;
-}
-
-
-bool InputArm::is_vol_down_pressed(){
-    return false;
-}
