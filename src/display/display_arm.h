@@ -9,7 +9,7 @@ class DisplayArm : public DisplayBase{
         DisplayArm(uint16_t width, uint16_t height);
         ~DisplayArm();
 
-        void write(uint16_t *buffer, uint32_t buffer_len);
+        void write(uint16_t *buffer, uint32_t buffer_len) override;
     private:
 };
 

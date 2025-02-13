@@ -10,12 +10,13 @@ class FilesArm : public FilesBase{
         FilesArm(uint16_t max_video_count, uint16_t path_len);
         ~FilesArm();
 
-        void next();
-        void prev();
-        void read(uint8_t *output, size_t size, uint32_t count);
-        void seek(long offset, int whence);
+        void next() override;
+        void prev() override;
+        ssize_t read_video(uint8_t *output, uint32_t count) override;
+        off_t seek_video(long offset, int whence) override;
     private:
-        
+        virtual void open_video(uint16_t video_index) override;
+        virtual void close_video() override;
 };
 
 #endif

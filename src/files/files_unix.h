@@ -10,13 +10,13 @@ class FilesUnix : public FilesBase{
         FilesUnix(uint16_t max_video_count, uint16_t path_name_len);
         ~FilesUnix();
 
-        void next();
-        void prev();
-        ssize_t read_video(uint8_t *output, uint32_t count);
-        off_t seek_video(long offset, int whence);
+        void next() override;
+        void prev() override;
+        ssize_t read_video(uint8_t *output, uint32_t count) override;
+        off_t seek_video(long offset, int whence) override;
     private:
-        void open_video(uint16_t video_index);
-        void close_video();
+        void open_video(uint16_t video_index) override;
+        void close_video() override;
 
         // Linux file descriptor
         int open_file;

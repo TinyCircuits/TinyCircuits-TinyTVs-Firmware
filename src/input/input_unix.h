@@ -9,7 +9,7 @@ class InputUnix : public InputBase{
         InputUnix(tv_pins_t *pins);
         ~InputUnix();
 
-        void poll();
+        void poll() override;
     private:
 };
 

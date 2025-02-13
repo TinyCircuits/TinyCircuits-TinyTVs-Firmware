@@ -10,7 +10,7 @@ class DisplayUnix : public DisplayBase{
         DisplayUnix(uint16_t width, uint16_t height);
         ~DisplayUnix();
 
-        void write(uint16_t *buffer, uint32_t buffer_len);
+        void write(uint16_t *buffer, uint32_t buffer_len) override;
     private:
 
         uint16_t *buffer;

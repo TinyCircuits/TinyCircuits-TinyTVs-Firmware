@@ -3,7 +3,7 @@
 #include <string.h>
 
 
-Demuxer::Demuxer(Files *files){
+Demuxer::Demuxer(Files *files) : BaseDemuxer(files), avi_demuxer(files), mov_demuxer(files){
     debug_println("Demuxer");
 
     // Store this
@@ -23,10 +23,12 @@ bool Demuxer::begin(){
     debug_println("Demuxer Begin");
 
     if(check_for_avi()){
+        avi_demuxer.begin();
         return true;
     }
 
     if(check_for_mov()){
+        mov_demuxer.begin();
         return true;
     }
 
@@ -37,11 +39,23 @@ bool Demuxer::begin(){
 
 
 size_t Demuxer::get_next_video_chunk(uint8_t *output, size_t output_size){
+    if(container_type == ContainerType::AVI){
+        return avi_demuxer.get_next_video_chunk(output, output_size);
+    }else if(container_type == ContainerType::MOV){
+        return mov_demuxer.get_next_video_chunk(output, output_size);
+    }
+
     return 0;
 }
 
 
 size_t Demuxer::get_next_audio_chunk(uint8_t *output, size_t output_size){
+    if(container_type == ContainerType::AVI){
+        return avi_demuxer.get_next_audio_chunk(output, output_size);
+    }else if(container_type == ContainerType::MOV){
+        return mov_demuxer.get_next_audio_chunk(output, output_size);
+    }
+
     return 0;
 }
 
@@ -69,7 +83,7 @@ bool Demuxer::check_for_avi(){
 bool Demuxer::check_for_mov(){
     uint8_t buffer[4];
 
-    // After 4 atom size bytes, next 4 bytes should be ascii `ftyp`
+    // After 4 atom size bytes, next 4 bytes should be ASCII `ftyp`
     // https://wiki.multimedia.cx/index.php?title=QuickTime_container#:~:text=tbd-,ftyp,-ftyp
     files->seek_video(4, SEEK_SET);
     files->read_video(buffer, 4);

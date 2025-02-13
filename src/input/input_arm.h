@@ -9,7 +9,7 @@ class InputArm : public InputBase{
         InputArm(tv_pins_t *pins);
         ~InputArm();
 
-        void poll();
+        void poll() override;
     private:
         uint16_t pressed;
 };
