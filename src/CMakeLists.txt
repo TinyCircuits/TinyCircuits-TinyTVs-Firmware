@@ -11,7 +11,7 @@ add_executable(tinytv
     main.cpp                    # Program entry point
     tinytv.cpp                  # TinyTV library
     debug/debug_unix.cpp        # Debug library
-    files/files.cpp             # Files library
+    files/files_base.cpp        # Files library
     files/files_unix.cpp        # Files library
     display/display_base.cpp    # Display library
     display/display_unix.cpp    # Display library
