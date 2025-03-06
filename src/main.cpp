@@ -29,7 +29,7 @@ tv_pins_t pins = {
 
 
 Files files(100, 150);
-Display display(128, 128);
+Display display(208, 136);
 TinyTV tv(&files, &display);
 Input input(&pins);
 Demuxer demuxer(&files);

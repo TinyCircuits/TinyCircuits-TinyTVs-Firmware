@@ -1,0 +1,13 @@
+
+// output: jpeg, pcm, avi
+ffmpeg -i input.mp4 -r 24 -pix_fmt yuv420p -vf scale=208:136,hqdn3d -b:v 1500k -c:v mjpeg -ac 1 -acodec pcm_u8 -af volume=0.0dB,aresample=10000,aresample=async=1000,aresample=osf=u8,asetnsamples=n=210:p=0 jpeg_pcm.avi
+
+// output: h264, pcm, avi
+ffmpeg -i input.mp4 -r 24 -bf 0 -pix_fmt yuv420p -profile:v baseline -vf scale=208:136,hqdn3d -vcodec libx264 -ac 1 -acodec pcm_u8 -af volume=0.0dB,aresample=10000,aresample=async=1000,aresample=osf=u8,asetnsamples=n=210:p=0 h264_pcm.avi
+
+// output: h264, mp3, mov
+ffmpeg -i input.mp4 -r 24 -bf 0 -pix_fmt yuv420p -profile:v baseline -vf scale=208:136,hqdn3d -vcodec libx264 -ac 1 -acodec libmp3lame -af volume=0.0dB,aresample=10000,aresample=async=1000,aresample=osf=u8,asetnsamples=n=210:p=0 h264_mp3.mov
+
+// output: h264, pcm, mov
+ffmpeg -i input.mp4 -r 24 -bf 0 -pix_fmt yuv420p -profile:v baseline -vf scale=208:136,hqdn3d -vcodec libx264 -ac 1 -acodec pcm_u8 -af volume=0.0dB,aresample=10000,aresample=async=1000,aresample=osf=u8,asetnsamples=n=210:p=0 h264_pcm.mov
+
