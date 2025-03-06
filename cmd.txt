@@ -10,4 +10,3 @@ ffmpeg -i input.mp4 -r 24 -bf 0 -pix_fmt yuv420p -profile:v baseline -vf scale=2
 
 // output: h264, pcm, mov
 ffmpeg -i input.mp4 -r 24 -bf 0 -pix_fmt yuv420p -profile:v baseline -vf scale=208:136,hqdn3d -vcodec libx264 -ac 1 -acodec pcm_u8 -af volume=0.0dB,aresample=10000,aresample=async=1000,aresample=osf=u8,asetnsamples=n=210:p=0 h264_pcm.mov
-
