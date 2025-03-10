@@ -13,8 +13,8 @@ class Demuxer : public BaseDemuxer{
         ~Demuxer();
 
         bool begin() override;
-        size_t get_next_video_chunk(uint8_t *output, size_t output_size) override;
-        size_t get_next_audio_chunk(uint8_t *output, size_t output_size) override;
+        size_t get_next_video_data(uint8_t *output, size_t output_size) override;
+        size_t get_next_audio_data(uint8_t *output, size_t output_size) override;
     private:
         // These functions are called from `.begin()` to check
         // the files contents for information indicating the

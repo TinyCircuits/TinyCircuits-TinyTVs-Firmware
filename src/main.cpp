@@ -56,7 +56,7 @@ int main(int argc, char *argv[]){
         }
 
         if(input.is_vol_up_pressed()){
-            demuxer.get_next_video_data();
+            demuxer.get_next_video_data(NULL, 0);
         }else if(input.is_vol_down_pressed()){
             
         }

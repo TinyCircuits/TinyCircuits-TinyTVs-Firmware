@@ -35,6 +35,7 @@ MOVDemuxer::~MOVDemuxer(){
 //              * mdhd <- `duration`, `time scale`                                                      https://developer.apple.com/standards/qtff-2001.pdf?#page=55
 //              * minf <- `smhd` or `vmhd` header for sound or video and contains `stbl`                https://developer.apple.com/standards/qtff-2001.pdf?#page=58
 //                  * stbl <-                                                                           https://developer.apple.com/standards/qtff-2001.pdf?#page=68
+//                      * stsz                                                                          https://developer.apple.com/standards/qtff-2001.pdf?#page=76
 //                      * stco                                                                          https://developer.apple.com/standards/qtff-2001.pdf?#page=78
 //      * trak  <- audio or video                                                                       https://developer.apple.com/standards/qtff-2001.pdf?#page=39
 //          * tkhd <- `track width`, `track height`, `track volume` (can be either video or sound)      https://developer.apple.com/standards/qtff-2001.pdf?#page=41
@@ -42,6 +43,7 @@ MOVDemuxer::~MOVDemuxer(){
 //              * mdhd <- `duration`, `time scale`                                                      https://developer.apple.com/standards/qtff-2001.pdf?#page=55
 //              * minf <- `smhd` or `vmhd` header for sound or video and contains `stbl`                https://developer.apple.com/standards/qtff-2001.pdf?#page=58
 //                  * stbl <-                                                                           https://developer.apple.com/standards/qtff-2001.pdf?#page=68
+//                      * stsz                                                                          https://developer.apple.com/standards/qtff-2001.pdf?#page=76
 //                      * stco                                                                          https://developer.apple.com/standards/qtff-2001.pdf?#page=78
 bool MOVDemuxer::begin(){
     debug_println("MOV Demuxer Begin");
@@ -58,6 +60,13 @@ bool MOVDemuxer::begin(){
 
 
 size_t MOVDemuxer::get_next_video_data(uint8_t *data_output, size_t data_output_size_limit){
+    debug_println("---");
+    debug_println(trak_video_chunk_count);
+    debug_println(trak_video_sample_count);
+
+    debug_println(trak_audio_chunk_count);
+    debug_println(trak_audio_sample_count);
+    debug_println("---");
     return 0;
 }
 
@@ -224,7 +233,10 @@ void MOVDemuxer::parse_tkhd_atom(off_t after_header_offset){
 
 
 void MOVDemuxer::parse_stsz_atom(off_t after_header_offset, uint32_t *number_of_entries, off_t *first_sample_offset){
-
+    files->video_seek(1 + 3 + 4, SEEK_CUR);
+    files->video_read((uint8_t *)(number_of_entries), 4);
+    *number_of_entries = SWAP_INT_32(*number_of_entries);
+    *first_sample_offset = after_header_offset + 1 + 3 + 4 + 4;
 }
 
 
@@ -232,6 +244,7 @@ void MOVDemuxer::parse_stco_atom(off_t after_header_offset, uint32_t *number_of_
     // Seek past irelevent info to `number of entries`
     files->video_seek(1 + 3, SEEK_CUR);
     files->video_read((uint8_t *)(number_of_entries), 4);
+    *number_of_entries = SWAP_INT_32(*number_of_entries);
     *first_chunk_offset = after_header_offset + 1 + 3 + 4;
 }
 
@@ -254,19 +267,22 @@ void MOVDemuxer::find_and_prase_mdia(off_t after_header_offset){
         off_t after_stbl_atom_header_offset = find_atom(after_header_offset, moov_end_offset, "stbl", &header);
 
         off_t after_stsz_atom_header_offset = find_atom(after_stbl_atom_header_offset, moov_end_offset, "stsz", &header);
-        parse_stco_atom(after_stsz_atom_header_offset, &trak_video_sample_count, &trak_video_sample_size_offset);
+        parse_stsz_atom(after_stsz_atom_header_offset, &trak_video_sample_count, &trak_video_sample_size_offset);
 
-        off_t after_stco_atom_header_offset = find_atom(after_stsz_atom_header_offset, moov_end_offset, "stco", &header);
+        off_t after_stco_atom_header_offset = find_atom(after_stsz_atom_header_offset - ATOM_HEADER_SIZE, moov_end_offset, "stco", &header);
         parse_stco_atom(after_stco_atom_header_offset, &trak_video_chunk_count, &trak_video_chunk_offset);
         return;
     }
 
+    
     off_t after_smhd_atom_header_offset = find_atom(after_header_offset, moov_end_offset, "smhd", &header);
     if(after_smhd_atom_header_offset != -1){
         off_t after_stbl_atom_header_offset = find_atom(after_header_offset, moov_end_offset, "stbl", &header);
 
+        off_t after_stsz_atom_header_offset = find_atom(after_stbl_atom_header_offset, moov_end_offset, "stsz", &header);
+        parse_stsz_atom(after_stsz_atom_header_offset, &trak_audio_sample_count, &trak_audio_sample_size_offset);
 
-        off_t after_stco_atom_header_offset = find_atom(after_stbl_atom_header_offset, moov_end_offset, "stco", &header);
+        off_t after_stco_atom_header_offset = find_atom(after_stsz_atom_header_offset - ATOM_HEADER_SIZE, moov_end_offset, "stco", &header);
         parse_stco_atom(after_stco_atom_header_offset, &trak_audio_chunk_count, &trak_audio_chunk_offset);
         return;
     }

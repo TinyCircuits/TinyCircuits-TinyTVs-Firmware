@@ -38,22 +38,22 @@ bool Demuxer::begin(){
 }
 
 
-size_t Demuxer::get_next_video_chunk(uint8_t *output, size_t output_size){
+size_t Demuxer::get_next_video_data(uint8_t *output, size_t output_size){
     if(container_type == ContainerType::AVI){
-        return avi_demuxer.get_next_video_chunk(output, output_size);
+        return avi_demuxer.get_next_video_data(output, output_size);
     }else if(container_type == ContainerType::MOV){
-        return mov_demuxer.get_next_video_chunk(output, output_size);
+        return mov_demuxer.get_next_video_data(output, output_size);
     }
 
     return 0;
 }
 
 
-size_t Demuxer::get_next_audio_chunk(uint8_t *output, size_t output_size){
+size_t Demuxer::get_next_audio_data(uint8_t *output, size_t output_size){
     if(container_type == ContainerType::AVI){
-        return avi_demuxer.get_next_audio_chunk(output, output_size);
+        return avi_demuxer.get_next_audio_data(output, output_size);
     }else if(container_type == ContainerType::MOV){
-        return mov_demuxer.get_next_audio_chunk(output, output_size);
+        return mov_demuxer.get_next_audio_data(output, output_size);
     }
 
     return 0;

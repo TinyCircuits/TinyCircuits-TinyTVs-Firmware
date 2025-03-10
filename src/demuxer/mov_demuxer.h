@@ -77,7 +77,6 @@ class MOVDemuxer : public BaseDemuxer{
         // Offsets to movie tracks that indicate locations of video and audio chunks in `mdat`: https://developer.apple.com/standards/qtff-2001.pdf?#page=39
         // Set in `find_and_parse_tkhd_atom(...)`
         uint32_t trak_video_duration;           // Duration of video track (can be different from audio)
-        uint32_t trak_video_stbl_offset;        // Offset is to after `stbl` atom header
 
         uint32_t trak_video_chunk_count;
         off_t trak_video_chunk_offset;          // Offset to start of first video media chunk and sample
@@ -87,7 +86,6 @@ class MOVDemuxer : public BaseDemuxer{
 
 
         uint32_t trak_audio_duration;           // Duration of audio track (can be different from video)
-        uint32_t trak_audio_stbl_offset;        // Offset is to after `stbl` atom header
 
         uint32_t trak_audio_chunk_count;
         off_t trak_audio_chunk_offset;          // Offset to start of first audio media chunk and sample
