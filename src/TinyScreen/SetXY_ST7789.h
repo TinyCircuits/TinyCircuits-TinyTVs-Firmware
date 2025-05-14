@@ -37,16 +37,15 @@ void ST7789InitSeq()
   delay(120);
   writeCommand(ST7789_NORON);
   writeCommand(ST7789_MADCTL);  writeData(TFT_MAD_BGR);
-  writeCommand(0xB6); writeData(0x0A); writeData(0x82);
   writeCommand(ST7789_RAMCTRL); writeData(0x00); writeData(0xE0);
   writeCommand(ST7789_COLMOD); writeData(0x55);
   delay(10);
   writeCommand(ST7789_PORCTRL); writeData(0x0c); writeData(0x0c); writeData(0x00); writeData(0x33); writeData(0x33);
   writeCommand(ST7789_GCTRL); writeData(0x35);
-  writeCommand(ST7789_VCOMS); writeData(0x28);
+  writeCommand(ST7789_VCOMS); writeData(0x19);
   writeCommand(ST7789_LCMCTRL); writeData(0x0C);
   writeCommand(ST7789_VDVVRHEN); writeData(0x01); writeData(0xFF);
-  writeCommand(ST7789_VRHS); writeData(0x10);
+  writeCommand(ST7789_VRHS); writeData(0x12);
   writeCommand(ST7789_VDVSET); writeData(0x20);
   writeCommand(ST7789_FRCTR2); writeData(0x0f);
   writeCommand(ST7789_PWCTRL1); writeData(0xa4); writeData(0xa1);
@@ -56,8 +55,8 @@ void ST7789InitSeq()
 
   constexpr static uint8_t pv_gamctrl_tab[] =
   {
-    0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x32, 0x44,
-    0x42, 0x06, 0x0e, 0x12, 0x14, 0x17,
+    0xd0, 0x04, 0x0D, 0x11, 0x13, 0x2B, 0x3F, 0x54,
+    0x4C, 0x18, 0x0D, 0x0B, 0x1F, 0x23,
   };
   for(int i = 0; i < sizeof(pv_gamctrl_tab); i++) writeData(pv_gamctrl_tab[i]);
 
@@ -65,8 +64,8 @@ void ST7789InitSeq()
 
   constexpr static uint8_t nv_gamctrl_tab[] =
   {
-    0xd0, 0x00, 0x02, 0x07, 0x0a, 0x28, 0x31, 0x54,
-    0x47, 0x0e, 0x1c, 0x17, 0x1b, 0x1e,
+    0xd0, 0x04, 0x0C, 0x11, 0x13, 0x2C, 0x3F, 0x44,
+    0x51, 0x2F, 0x1F, 0x1F, 0x20, 0x23,
   };
   for(int i = 0; i < sizeof(nv_gamctrl_tab); i++) writeData(nv_gamctrl_tab[i]);
 
