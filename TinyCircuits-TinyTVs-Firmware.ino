@@ -244,6 +244,7 @@ void loop() {
   }
 
   if (powerDownTimer && millis() - powerDownTimer > staticTimeMS) {
+    if (settingsNeedSaved) saveSettings();
     //off
     powerDownTimer = 0;
     TVscreenOffMode = true;
