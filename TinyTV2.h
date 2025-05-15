@@ -78,15 +78,12 @@ const int ENCODER2_PINB = 24;
 // Ugly state variables for encoders
 volatile int encoderDirection = 0;
 volatile int encoder2Direction = 0;
-volatile int lastEncoderChangeTime = 0;
-int newPinA = 1;
-int newPinB = 1;
-int oldPinA = 1;
-int oldPinB = 1;
-int newPinA2 = 1;
-int newPinB2 = 1;
-int oldPinA2 = 1;
-int oldPinB2 = 1;
+
+bool bothPinsWereHigh = true;
+int startTimeOfBothPinsHigh = 0;
+
+bool bothPinsWereHigh2 = true;
+int startTimeOfBothPinsHigh2 = 0;
 
 volatile uint32_t powerButtonWasPressed = 0;
 
@@ -181,24 +178,21 @@ int initializeFS() {
 
 void updateButtonStates(inputFlagStruct * inputFlags) {
   // Encoder/button input
-
-  if (millis() - lastEncoderChangeTime > 20) {
-    if (encoderDirection > 0) {
-      encoderDirection = 0;
-      inputFlags->channelUp = true;
-    }
-    if (encoderDirection < 0) {
-      encoderDirection = 0;
-      inputFlags->channelDown = true;
-    }
-    if (encoder2Direction > 0) {
-      encoder2Direction = 0;
-      inputFlags->volUp = true;
-    }
-    if (encoder2Direction < 0) {
-      encoder2Direction = 0;
-      inputFlags->volDown = true;
-    }
+  if (encoderDirection > 0) {
+    encoderDirection = 0;
+    inputFlags->channelUp = true;
+  }
+  if (encoderDirection < 0) {
+    encoderDirection = 0;
+    inputFlags->channelDown = true;
+  }
+  if (encoder2Direction > 0) {
+    encoder2Direction = 0;
+    inputFlags->volUp = true;
+  }
+  if (encoder2Direction < 0) {
+    encoder2Direction = 0;
+    inputFlags->volDown = true;
   }
   if (powerButtonWasPressed && (millis() - powerButtonWasPressed > 20)) {
     if (digitalRead(POWER_BTN_PIN) == LOW) {
@@ -209,35 +203,38 @@ void updateButtonStates(inputFlagStruct * inputFlags) {
 }
 
 void encoderPinChange() {
-  newPinA = digitalRead(ENCODER_PINA);
-  newPinB = digitalRead(ENCODER_PINB);
-  if (newPinA != oldPinA || newPinB != oldPinB) {
-    if ( !oldPinB && !newPinB ) {
-      if (!oldPinA &&  newPinA)
-        encoderDirection = -1;
-      if (oldPinA &&  !newPinA)
-        encoderDirection = 1;
+  bool newPinA = digitalRead(ENCODER_PINA);
+  bool newPinB = digitalRead(ENCODER_PINB);
+  
+  if (!newPinA || !newPinB) {
+    if (bothPinsWereHigh) {
+      if ((millis() - startTimeOfBothPinsHigh) > 20) {
+        encoderDirection = newPinA ? 1 : -1;
+      }
     }
-    lastEncoderChangeTime = millis();
+    bothPinsWereHigh = false;
+  } else {
+    bothPinsWereHigh = true;
+    startTimeOfBothPinsHigh = millis();
   }
-  oldPinA = newPinA;
-  oldPinB = newPinB;
+
 }
 
 void encoder2PinChange() {
-  newPinA2 = digitalRead(ENCODER2_PINA);
-  newPinB2 = digitalRead(ENCODER2_PINB);
-  if (newPinA2 != oldPinA2 || newPinB2 != oldPinB2) {
-    if ( !oldPinB2 && !newPinB2 ) {
-      if (!oldPinA2 &&  newPinA2)
-        encoder2Direction = -1;
-      if (oldPinA2 &&  !newPinA2)
-        encoder2Direction = 1;
+  bool newPinA2 = digitalRead(ENCODER2_PINA);
+  bool newPinB2 = digitalRead(ENCODER2_PINB);
+  
+  if (!newPinA2 || !newPinB2) {
+    if (bothPinsWereHigh2) {
+      if ((millis() - startTimeOfBothPinsHigh2) > 20) {
+        encoder2Direction = newPinA2 ? 1 : -1;
+      }
     }
-    lastEncoderChangeTime = millis();
+    bothPinsWereHigh2 = false;
+  } else {
+    bothPinsWereHigh2 = true;
+    startTimeOfBothPinsHigh2 = millis();
   }
-  oldPinA2 = newPinA2;
-  oldPinB2 = newPinB2;
 }
 
 void powerButtonPressedInt() {
