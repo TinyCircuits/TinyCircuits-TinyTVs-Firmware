@@ -49,9 +49,9 @@ JPEGDEC jpeg;
 
 
 // Select ONE from this list!
-#include "TinyTV2.h"
+//#include "TinyTV2.h"
 //#include "TinyTVMini.h"
-//#include "TinyTVKit.h"
+#include "TinyTVKit.h"
 
 #ifdef ARDUINO_ARCH_RP2040
 #include <Adafruit_TinyUSB.h>
@@ -475,7 +475,7 @@ void loop() {
       jd.iHeight = 16;
       jd.pPixels = (uint16_t*)videoBuf;
       int totalHeight = VIDEO_H;
-      while (totalHeight) {
+      while (totalHeight && !streamError) {
         int blockHeight = min(16, totalHeight);
         int bytes = readTSVBytes((uint8_t*)videoBuf, VIDEO_W * blockHeight * 2);
         if (bytes == VIDEO_W * blockHeight * 2) {
@@ -496,7 +496,7 @@ void loop() {
           streamError = true;
         }
       }
-      for (int blocks = 0; blocks < 4; blocks++) {
+      for (int blocks = 0; (blocks < 4) && !streamError; blocks++) {
         uint8_t audioBuffer[512];
         int bytes = readTSVBytes(audioBuffer, sizeof(audioBuffer));
         if (bytes == sizeof(audioBuffer)) {

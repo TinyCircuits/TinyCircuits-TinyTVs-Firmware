@@ -1,3 +1,7 @@
+1.2.5
+*Add capability to display a splash screen during power up
+*Swap physical button sides for TinyTV DIY Kit channel/volume inputs 
+
 1.2.4
 *Fix settings overwrite when mass storage is ejected from computer
 *Add requirements for video frame size to avoid crashes
