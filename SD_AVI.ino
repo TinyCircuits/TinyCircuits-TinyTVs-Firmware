@@ -305,27 +305,27 @@ int getVideoInfo(int startTimeOffsetS) {
       // if it's a chunk, we already read the first 4 bytes
       skipBytes -= 4;
     }
-    
+
     if (strncmp((char *)chunkHeader + 0, "avih", 4) == 0) {
       dbgPrint("Found avih");
       infile.seekCur(28);
-      if (infile.read(chunkHeader, 4) != 4){
+      if (infile.read(chunkHeader, 4) != 4) {
         return 1;
       }
       frameWidth = getInt(chunkHeader);
-      if (infile.read(chunkHeader, 4) != 4){
+      if (infile.read(chunkHeader, 4) != 4) {
         return 1;
       }
       frameHeight = getInt(chunkHeader);
-      
-      dbgPrint("Width: " + String(frameWidth)+ " Height: " + String(frameHeight));
-      if (abs((int)VIDEO_W-(int)frameWidth)>10 || abs((int)VIDEO_H-(int)frameHeight)>10) {
+
+      dbgPrint("Width: " + String(frameWidth) + " Height: " + String(frameHeight));
+      if (abs((int)VIDEO_W - (int)frameWidth) > 10 || abs((int)VIDEO_H - (int)frameHeight) > 10) {
         dbgPrint("Frame size incorrect!");
         return 1;
       }
-      skipBytes -= (28+4+4);
+      skipBytes -= (28 + 4 + 4);
     }
-    
+
     if (strncmp((char *)chunkHeader + 0, "strh", 4) == 0) {
       dbgPrint("In stream header");
       if (strncmp((char *)chunkHeader + 8, "auds", 4) == 0) {
@@ -569,7 +569,7 @@ int strcasecmp_withNumbers(const void *void_a, const void *void_b) {
 }
 
 //#define cdc SerialUSB
-int loadVideoList() {
+int loadVideoList(char * splashFN) {
   //delay(5000);
   char * temporaryFileNameList = (char *)sharedBuffer; //use video and audio buffers to alphabetize filenames
   int tempFileNameLength = MAX_LFN_LEN;
@@ -590,8 +590,11 @@ int loadVideoList() {
     infile.getSFN(fileName, MAX_LFN_LEN);
     infile.getName(fileName, MAX_LFN_LEN);
     if (fileName[0] != '.') {
-      if (!strcasecmp(fileName + strlen(fileName) - 4, ".avi") || !strcasecmp(fileName + strlen(fileName) - 4, ".tsv")) {
-        //strcpy(aviList[aviCount], fileName);
+      if ( !strcasecmp(fileName, "splash.avi") || !strcasecmp(fileName, "splash.tsv")) {
+        // Do not add to list
+        infile.getSFN(splashFN, 15);
+      }else if (!strcasecmp(fileName + strlen(fileName) - 4, ".avi") || !strcasecmp(fileName + strlen(fileName) - 4, ".tsv")) {
+        // Regular video
         strcpy(temporaryFileNameList + (aviCount * tempFileNameLength), fileName);
         aviCount++;
       } else {

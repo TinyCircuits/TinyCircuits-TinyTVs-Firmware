@@ -81,6 +81,8 @@ uint64_t settingsNeedSaved = 0;
 uint64_t framerateHelper = 0;
 bool live = false;
 int staticTimeMS = 300;
+char splashVidFileName[20] = "";
+bool splashPlaybackMode = false;
 
 void setup() {
 #ifdef has_USB_MSC
@@ -141,21 +143,31 @@ void initVideoPlayback(bool loadSettingsFile) {
     setMillisOffset(0);
   }
   setVolume(volumeSetting);
-  int videoCount = loadVideoList();
+  int videoCount = loadVideoList(splashVidFileName);
   if (videoCount) {
     showNoVideoError = false;
     if (randStartChan) {
       channelNumber = random(videoCount) + 1;
     }
-    if (startVideoByChannel(channelNumber)) {
-      nextVideoError = millis();
-    } else {
-      //prevVideo();
-      drawChannelNumberFor(1000);
+    if (strlen(splashVidFileName)) {
+      dbgPrint(splashVidFileName);
+      splashPlaybackMode = true;
+      startVideo(splashVidFileName, 0);
       setAudioSampleRate(getVideoAudioRate());
       clearAudioBuffer();
-      drawStaticFor(staticTimeMS);
-      playStaticFor(staticTimeMS);
+      inputFlags.channelSet = false; //Stop channel from changing after reading settings file
+      inputFlags.volumeSet = false; //Stop volume from changing after reading settings file
+    } else {
+      if (startVideoByChannel(channelNumber)) {
+        nextVideoError = millis();
+      } else {
+        //prevVideo();
+        drawChannelNumberFor(1000);
+        setAudioSampleRate(getVideoAudioRate());
+        clearAudioBuffer();
+        drawStaticFor(staticTimeMS);
+        playStaticFor(staticTimeMS);
+      }
     }
   } else {
     showNoVideoError = true;
@@ -212,6 +224,7 @@ void loop() {
     }
   }
   if (inputFlags.settingsChanged) {
+    dbgPrint("inputFlags.settingsChanged");
     inputFlags.settingsChanged = false;
     settingsNeedSaved = millis();
   }
@@ -226,6 +239,7 @@ void loop() {
   // Handle any input flags
 
   if (inputFlags.power) {
+    dbgPrint("inputFlags.power");
     inputFlags.power = false;
     if (doStaticEffects) {
       drawStaticFor(staticTimeMS);
@@ -235,8 +249,14 @@ void loop() {
       //on
       TVscreenOffMode = false;
       clearAudioBuffer();
-      //drawChannelNumberFor(1000);
       displayOn();
+      if (strlen(splashVidFileName)) {
+        dbgPrint(splashVidFileName);
+        splashPlaybackMode = true;
+        startVideo(splashVidFileName, 0);
+        setAudioSampleRate(getVideoAudioRate());
+        clearAudioBuffer();
+      }
     } else {
       //set off timer
       powerDownTimer = millis();
@@ -268,6 +288,7 @@ void loop() {
   }
 
   if (inputFlags.mute) {
+    dbgPrint("inputFlags.mute");
     inputFlags.mute = false;
     if (!TVscreenOffMode) {
       setMute(!isMute());
@@ -275,7 +296,9 @@ void loop() {
   }
 
   if (inputFlags.channelUp) {
+    dbgPrint("inputFlags.channelUp");
     inputFlags.channelUp = false;
+    splashPlaybackMode=false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (nextVideo()) {
@@ -293,7 +316,9 @@ void loop() {
   }
 
   if (inputFlags.channelDown) {
+    dbgPrint("inputFlags.channelDown");
     inputFlags.channelDown = false;
+    splashPlaybackMode=false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (prevVideo()) {
@@ -310,7 +335,9 @@ void loop() {
     }
   }
   if (inputFlags.channelSet) {
+    dbgPrint("inputFlags.channelSet");
     inputFlags.channelSet = false;
+    splashPlaybackMode=false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (startVideoByChannel(channelNumber)) {
@@ -328,6 +355,7 @@ void loop() {
   }
 
   if (inputFlags.volUp) {
+    dbgPrint("inputFlags.volUp");
     inputFlags.volUp = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
@@ -337,6 +365,7 @@ void loop() {
     }
   }
   if (inputFlags.volDown) {
+    dbgPrint("inputFlags.volDown");
     inputFlags.volDown = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
@@ -346,6 +375,7 @@ void loop() {
     }
   }
   if (inputFlags.volumeSet) {
+    dbgPrint("inputFlags.volumeSet");
     inputFlags.volumeSet = false;
     if (!TVscreenOffMode && !live) {
       setVolume(volumeSetting);
@@ -392,7 +422,7 @@ void loop() {
 
 
 
-
+  bool streamError = false;
   if (isAVIStreamAvailable()) {
     uint32_t len = nextChunkLength();
     if (len > 0) {
@@ -403,7 +433,6 @@ void loop() {
         int bytes = readNextChunk(audioBuffer, sizeof(audioBuffer));
         addToAudioBuffer(audioBuffer, bytes);
         t1 = micros() - t1;
-
         totalTime += t1;
       } else if (isNextChunkVideo()) {
         // Found a chunk of video, decode it
@@ -416,51 +445,24 @@ void loop() {
           readNextChunk(getFreeJPEGBuffer(), VIDEOBUF_SIZE);
           JPEGBufferFilled(len);
           t1 = micros() - t1;
-
           totalTime += t1;
-
         }
       } else if (isNextChunkIndex()) {
         if (jumpToNextMoviList()) {
           dbgPrint("jumpToNextMoviList error");
-          if (loopVideo == false) {
-            nextVideo();
-            setAudioSampleRate(getVideoAudioRate());
-            drawChannelNumberFor(1000);
-          } else {
-            startVideo("", 0);
-          }
+          streamError = true;
         }
       } else {
         dbgPrint("chunk unrecognized ");
         dbgPrint(String(len));
-        if (loopVideo == false) {
-          nextVideo();
-          setAudioSampleRate(getVideoAudioRate());
-          drawChannelNumberFor(1000);
-        } else {
-          startVideo("", 0);
-        }
+        streamError = true;
       }
-
     } else {
       dbgPrint("0 length chunk or read error?");
       skipChunk();
       if (nextChunkLength() == 0) {
         dbgPrint("Two zero length chunks, skipping..");
-
-        if (doStaticEffects) {
-          drawStaticFor(staticTimeMS);
-          playStaticFor(staticTimeMS);
-        }
-        // Find a new video to play or loop
-        if (loopVideo == false) {
-          nextVideo();
-          setAudioSampleRate(getVideoAudioRate());
-          drawChannelNumberFor(1000);
-        } else {
-          startVideo("", 0);
-        }
+        streamError = true;
       }
     }
   } else if (isTSVStreamAvailable()) {
@@ -473,49 +475,60 @@ void loop() {
       jd.iHeight = 16;
       jd.pPixels = (uint16_t*)videoBuf;
       int totalHeight = VIDEO_H;
-      bool readError = false;
       while (totalHeight) {
         int blockHeight = min(16, totalHeight);
         int bytes = readTSVBytes((uint8_t*)videoBuf, VIDEO_W * blockHeight * 2);
-        if (bytes != VIDEO_W * blockHeight * 2) {
-          readError = true;
+        if (bytes == VIDEO_W * blockHeight * 2) {
+          uint16_t bgr;
+          for (int i = 0; i < VIDEO_W * blockHeight; i++) {
+            bgr = ((uint16_t*)videoBuf)[i];
+            bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
+            bgr = ((bgr << 11) & 0xF800) | (bgr & 0x07E0) | ((bgr >> 11) & 0x001F);
+            bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
+            ((uint16_t*)videoBuf)[i] = bgr;
+          }
+          jd.iHeight = blockHeight;
+          JPEGDraw(&jd);
+          jd.y += blockHeight;
+          totalHeight -= blockHeight;
+        } else {
+          dbgPrint("TSV video data read error");
+          streamError = true;
         }
-        uint16_t bgr;
-        for (int i = 0; i < VIDEO_W * blockHeight; i++) {
-          bgr = ((uint16_t*)videoBuf)[i];
-          bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
-          bgr = ((bgr << 11) & 0xF800) | (bgr & 0x07E0) | ((bgr >> 11) & 0x001F);
-          bgr = ((bgr & 0x00ff) << 8) | ((bgr & 0xff00) >> 8);
-          ((uint16_t*)videoBuf)[i] = bgr;
-        }
-        jd.iHeight = blockHeight;
-        JPEGDraw(&jd);
-        jd.y += blockHeight;
-        totalHeight -= blockHeight;
       }
       for (int blocks = 0; blocks < 4; blocks++) {
         uint8_t audioBuffer[512];
         int bytes = readTSVBytes(audioBuffer, sizeof(audioBuffer));
-        if (bytes != sizeof(audioBuffer)) {
-          readError = true;
-        }
-        for (int i = 0; i < bytes / 2; i++) {
-          uint16_t sample = ((uint16_t *)audioBuffer)[i];
-          audioBuffer[i] = sample >> 2;
-        }
-        addToAudioBuffer(audioBuffer, bytes / 2);
-      }
-      if (readError) {
-        if (loopVideo == false) {
-          nextVideo();
-          setAudioSampleRate(getVideoAudioRate());
-          drawChannelNumberFor(1000);
+        if (bytes == sizeof(audioBuffer)) {
+          for (int i = 0; i < bytes / 2; i++) {
+            uint16_t sample = ((uint16_t *)audioBuffer)[i];
+            audioBuffer[i] = sample >> 2;
+          }
+          addToAudioBuffer(audioBuffer, bytes / 2);
         } else {
-          startVideo("", 0);
+          dbgPrint("TSV audio data read error");
+          streamError = true;
         }
       }
     }
   }
+
+  if (streamError) {
+    dbgPrint("streamError");
+    if (splashPlaybackMode) {
+      dbgPrint("streamError splashPlaybackMode");
+      inputFlags.channelSet = true;
+      splashPlaybackMode = false;
+    } else {
+      // Find a new video to play or loop
+      if (loopVideo == false) {
+        inputFlags.channelUp = true;
+      } else {
+        inputFlags.channelSet = true;
+      }
+    }
+  }
+
 
 
   unsigned long t1 = micros();
