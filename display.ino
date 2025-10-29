@@ -175,28 +175,10 @@ void initializeDisplay() {
 }
 
 void displayOff() {
-#ifndef TinyTVKit
-#ifdef TinyTVMini
-  digitalWrite(9, LOW);
   display.off();
-#else
-  digitalWrite(9, HIGH);
-  display.off();
-#endif
-#else
-  display.off();
-#endif
-
 }
 
 void displayOn() {
-#ifndef TinyTVKit
-#ifdef TinyTVMini
-  digitalWrite(9, HIGH);
-#else
-  digitalWrite(9, LOW);
-#endif
-#endif
   display.on();
 }
 

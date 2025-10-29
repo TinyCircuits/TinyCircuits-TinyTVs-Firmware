@@ -14,7 +14,11 @@ void setYSSD1357(const int32_t y0, const int32_t y1)
   tft_pio->sm[pio_sm].instr = pio_instr_addr;
   clearDC(); write8(SSD1357_CASET);
   setDC(); write16((y1+yOff) | ((y0+yOff) << 8));
-  clearDC(); write8(SSD1357_RAMWR);
+  delayMicroseconds(10);
+  clearDC();
+  delayMicroseconds(10);
+  write8(SSD1357_RAMWR);
+  delayMicroseconds(10);
   setDC();
 }
 
@@ -38,17 +42,16 @@ void SSD1357InitSeq()
   // RP2040TVMini init
   writeCommand(0xFD); writeData(0x12);
   writeCommand(0xAE); // DISPLAYOFF
-  writeCommand(0xB0); writeData(0xB0);
-  writeCommand(0xCA); writeData(0x7F);
+  writeCommand(0xB3); writeData(0x20); //missing/typo-> mfg says 0xB0, but seems like default 0x20 is better
+  writeCommand(0xCA); writeData(0x3F); //was 0x7F, should be 0x3F
   writeCommand(0xA2); writeData(0x40);
   writeCommand(0xB1); writeData(0x32);
   writeCommand(0xBE); writeData(0x05);
   writeCommand(0xB6); writeData(0x01);
   writeCommand(0xBB); writeData(0x17);
   writeCommand(0xA6); // NORMALDISPLAY
-  writeCommand(0xC1); writeData(0x88); writeData(0x32); writeData(0x88);
+  writeCommand(0xC1); writeData(0x88+4); writeData(0x32); writeData(0x88-4); //adjust red down slightly
   writeCommand(0xC7); writeData(0x0F);
-  writeCommand(0xB6); writeData(0x01);
   int j;
   constexpr static uint8_t gamma[63]=
   {

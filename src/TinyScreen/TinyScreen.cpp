@@ -556,8 +556,14 @@ void TinyScreen::setBrightness(uint8_t brightness) {
 void TinyScreen::on(void) {
   startCommand();
 #if defined(ARDUINO_ARCH_MBED_RP2040) | defined(ARDUINO_ARCH_RP2040)
-  if(_type == RP2040TVMini) writeCommand(0xAF); // DISPLAYON
-  else if(_type == RP2040TV || _type == H8Ball) writeCommand(0x29);
+  if(_type == RP2040TVMini){
+    digitalWrite(9, HIGH);
+    delayMicroseconds(10000);
+    writeCommand(0xAF); // DISPLAYON
+  }else if(_type == RP2040TV || _type == H8Ball){
+    digitalWrite(9, LOW);
+    writeCommand(0x29);
+  }
 #else
   if(!_externalIO){
     digitalWrite(TSP_PIN_SHDN,HIGH);
@@ -571,8 +577,13 @@ void TinyScreen::on(void) {
 void TinyScreen::off(void) {
   startCommand();
 #if defined(ARDUINO_ARCH_MBED_RP2040) | defined(ARDUINO_ARCH_RP2040)
-  if(_type == RP2040TVMini) writeCommand(0xAE); // DISPLAYOFF
-  else if(_type == RP2040TV) writeCommand(0x28);
+  if(_type == RP2040TVMini){
+    writeCommand(0xAE); // DISPLAYOFF
+    digitalWrite(9, LOW);
+  }else if(_type == RP2040TV){
+    writeCommand(0x28);
+    digitalWrite(9, HIGH);
+  }
 #else
   TSSPI->transfer(0xAE); // DISPLAYON
   if(_externalIO){
