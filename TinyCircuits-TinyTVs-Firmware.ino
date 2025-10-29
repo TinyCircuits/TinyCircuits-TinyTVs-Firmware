@@ -257,7 +257,7 @@ void loop() {
         setAudioSampleRate(getVideoAudioRate());
         clearAudioBuffer();
       }
-    } else {
+    } else if (!powerDownTimer) {
       //set off timer
       powerDownTimer = millis();
     }
@@ -269,23 +269,13 @@ void loop() {
     powerDownTimer = 0;
     TVscreenOffMode = true;
     TVscreenOffModeStartTime = millis();
-    //delay(30);
+    delay(30);//allow any frames to be displayed
     clearAudioBuffer();
     clearDisplay();
     startTubeOffEffect();
     while (tubeOffEffect() > 3);
     //stopStaticEffect();
     displayOff();
-  }
-
-  if (TVscreenOffMode) {
-#ifndef TinyTVKit
-    // Turn TV off after specified duration in screen off mode
-    if (millis() - TVscreenOffModeStartTime > 1000 * powerTimeoutSecs) {
-      hardwarePowerOff();
-    }
-#endif
-    return;
   }
 
   if (inputFlags.mute) {
@@ -299,7 +289,7 @@ void loop() {
   if (inputFlags.channelUp) {
     dbgPrint("inputFlags.channelUp");
     inputFlags.channelUp = false;
-    splashPlaybackMode=false;
+    splashPlaybackMode = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (nextVideo()) {
@@ -319,7 +309,7 @@ void loop() {
   if (inputFlags.channelDown) {
     dbgPrint("inputFlags.channelDown");
     inputFlags.channelDown = false;
-    splashPlaybackMode=false;
+    splashPlaybackMode = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (prevVideo()) {
@@ -338,7 +328,7 @@ void loop() {
   if (inputFlags.channelSet) {
     dbgPrint("inputFlags.channelSet");
     inputFlags.channelSet = false;
-    splashPlaybackMode=false;
+    splashPlaybackMode = false;
     if (!TVscreenOffMode && !live) {
       settingsNeedSaved = millis();
       if (startVideoByChannel(channelNumber)) {
@@ -384,8 +374,16 @@ void loop() {
       drawVolumeFor(1000);
     }
   }
-
-
+  
+  if (TVscreenOffMode) {
+#ifndef TinyTVKit
+    // Turn TV off after specified duration in screen off mode
+    if (millis() - TVscreenOffModeStartTime > 1000 * powerTimeoutSecs) {
+      hardwarePowerOff();
+    }
+#endif
+    return;
+  }
 
   if (live) {
 #ifdef TinyTVKit
