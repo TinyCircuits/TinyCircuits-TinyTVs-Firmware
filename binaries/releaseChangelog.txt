@@ -1,3 +1,9 @@
+1.2.6
+*Change gamma on TV2. Greatly reduce banding in darker areas at slightly lower overall brightness
+*Slight change to gamma on Mini- reduce red output overall
+*Improved dial debounce- thanks again omgitsraven
+*Hopefully fix the occasional on/off screen freeze issue that was more prevalent on TinyTV Mini
+
 1.2.5
 *Add capability to display a splash screen during power up
 *Swap physical button sides for TinyTV DIY Kit channel/volume inputs 

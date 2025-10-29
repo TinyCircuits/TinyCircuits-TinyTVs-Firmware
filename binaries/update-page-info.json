@@ -1,10 +1,10 @@
 {
     "tinytv2": {
-        "latest-version": [1, 2, 4],
+        "latest-version": [1, 2, 6],
         "firmware-url": "https://raw.githubusercontent.com/TinyCircuits/TinyCircuits-TinyTVs-Firmware/master/binaries/tinytv-2-firmware-_X_._Y_._Z_.uf2"
     },
     "tinytvmini": {
-        "latest-version": [1, 2, 4],
+        "latest-version": [1, 2, 6],
         "firmware-url": "https://raw.githubusercontent.com/TinyCircuits/TinyCircuits-TinyTVs-Firmware/master/binaries/tinytv-mini-firmware-_X_._Y_._Z_.uf2"
     },
     "tinytvdiy": {
