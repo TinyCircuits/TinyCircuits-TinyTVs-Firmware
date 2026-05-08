@@ -33,7 +33,7 @@
 */
 
 // Uncomment to compile debug version
-//#define DEBUGAPP (true)
+#define DEBUGAPP (true)
 
 // This include order matters
 #include <SPI.h>
@@ -51,8 +51,8 @@ JPEGDEC jpeg;
 bool streamError = false;
 
 // Select ONE from this list!
-//#include "TinyTV2.h"
-#include "TinyTVMini.h"
+#include "TinyTV2.h"
+//#include "TinyTVMini.h"
 //#include "TinyTVKit.h"
 
 #ifdef ARDUINO_ARCH_RP2040
@@ -127,6 +127,7 @@ extern "C" {
 
 void setup() {
 #ifdef has_USB_MSC
+  USBMSC_bus_detach_before_rebuild();
   Serial.end();
   cdc.begin(0);
   // Do MSC setup quickly so PC recognizes us as a mass storage device
@@ -142,6 +143,11 @@ void setup() {
   //dbgPrint("Initialized HW");
 
   if (!initializeSDcard()) {
+#ifdef has_USB_MSC
+    // Happy path calls this after USBMSCReady(); without SD we never get there — still
+    // attach so CDC works for the error loop.
+    USBMSC_bus_attach_after_msc_geometry_ready();
+#endif
     displayCardNotFound();
     while (1) {
       uint16_t totalJPEGBytesUnused;
@@ -157,6 +163,7 @@ void setup() {
 #ifdef has_USB_MSC
   USBMSCReady();
   cdc.begin(115200);
+  USBMSC_bus_attach_after_msc_geometry_ready();
 #endif
   
 #ifndef TinyTVKit
@@ -196,7 +203,11 @@ void initVideoPlayback(bool loadSettingsFile) {
     }
   }
   if (loadSettingsFile) {
-    loadSettings();
+    if(LittleFS.exists("settings.txt")) {
+      loadSettingsFlashBuffer();
+    } else {
+      loadSettings();
+    }
   }
   randomSeed(micros());
   if (randStartTime) {
@@ -238,10 +249,17 @@ void initVideoPlayback(bool loadSettingsFile) {
 void loop() {
 #ifdef has_USB_MSC
   if (USBJustConnected() && !live) {
+    releaseSdCardForUSBMSC();
     setAudioSampleRate(100);
+    saveSettings(); // Save settings to SD card on USB connect
     USBMSCStart();
     for (int i = 0; i < 50; i++) {
-      delay(1); yield();
+      delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
+      yield();
+#endif
     }
     if (TVscreenOffMode) {
       TVscreenOffMode = false;
@@ -250,7 +268,15 @@ void loop() {
     displayUSBMSCmessage();
   }
   if (handleUSBMSC(powerButtonPressed())) {
-    //USBMSC active, handle CDC commands except for filling frames:
+    // Do not run incomingCDCHandler() during MSC (see USB_MSC / MACOS_USB_STORAGE).
+    // Do not use yield() here: it flushes CDC TX every time and breaks MSC on macOS composite.
+#ifdef ARDUINO_ARCH_RP2040
+    msc_yield_usb_only();
+#else
+    yield();
+#endif
+
+    // Do CDC things anyways
     uint16_t totalJPEGBytesUnused;
     if (getFreeJPEGBuffer()) {
       if (incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE, &live, &totalJPEGBytesUnused)) {
@@ -259,18 +285,25 @@ void loop() {
     } else {
       incomingCDCHandler(NULL, 0, &live, &totalJPEGBytesUnused);
     }
+
     return;
   }
   if (USBMSCJustStopped()) {
     dbgPrint("MSC Stopped");
     for (int i = 0; i < 50; i++) {
-      delay(1); yield();
+      delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
+      yield();
+#endif
     }
     //USBMSC ejected, return to video playback:
     clearPowerButtonPressInt();
+    loadSettings(); // Reload settings from SD card in case user changed them
     if (inputFlags.settingsChanged) {
       inputFlags.settingsChanged = false;
-      saveSettings();
+      saveSettingsFlashBuffer();
     }
     initVideoPlayback(true);
   }
@@ -325,13 +358,13 @@ void loop() {
   }
 
   if (powerDownTimer && millis() - powerDownTimer > staticTimeMS) {
-    if (settingsNeedSaved) saveSettings();
+    if (settingsNeedSaved) saveSettingsFlashBuffer();
     //off
     powerDownTimer = 0;
     TVscreenOffMode = true;
     TVscreenOffModeStartTime = millis();
     while(!getFreeJPEGBuffer()) {yield();}
-    while(getFilledJPEGBuffer()) {yield();}
+    //while(getFilledJPEGBuffer()) {yield();}
     delay(30);//allow any frames to be displayed
     resetBuffers();
     clearAudioBuffer();
@@ -670,7 +703,7 @@ void loop() {
   if (settingsNeedSaved) {
     if (millis() - settingsNeedSaved > 2000) {
       dbgPrint("Saving settings file");
-      saveSettings();
+      saveSettingsFlashBuffer();
       settingsNeedSaved = 0;
       dbgPrint("Saved settings file");
     }
@@ -717,6 +750,8 @@ void setup1() {
 }
 
 void loop1() {
+
+  MSCloopCore1();
   
   if (TVscreenOffMode) {
     return;

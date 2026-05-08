@@ -111,6 +111,7 @@ bool handleCDCcommand(String input) {
 
 void commandSearch(uint16_t jpegBufferSize) {
   while (SerialInterface.available()) {
+    handleUSBMSC(false);
     char c = SerialInterface.read();
     if (!commandStartMS) {
       if (c == '{') {
@@ -126,6 +127,7 @@ void commandSearch(uint16_t jpegBufferSize) {
         if (handleCDCcommand(String(commandBuffer))) {
           // Format error- clear buffer
           while (SerialInterface.available()) {
+            handleUSBMSC(false);
             SerialInterface.read();
           }
         }
@@ -148,8 +150,8 @@ void commandSearch(uint16_t jpegBufferSize) {
 
 bool incomingCDCHandler(uint8_t *jpegBuffer, uint16_t jpegBufferSize, bool *live, uint16_t *totalBytes) {
   //Serial.println("CDC handler!");
-  yield();
-  SerialInterface.flush();
+  // yield();
+  tud_cdc_write_flush(); //SerialInterface.flush();
   if (SerialInterface.available() > 0) {
     liveTimeoutStart = millis();
 

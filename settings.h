@@ -10,6 +10,8 @@
 //
 //-------------------------------------------------------------------------------
 
+#include <LittleFS.h>
+
 // SETTINGS DEFAULTS
 int channelNumber = 1;
 //int volumeSetting = 3;
@@ -68,6 +70,28 @@ String getKeyValue(String key) {
   return "none";
 }
 
+// extern uint32_t getFreeHeap();
+
+void saveSettingsFlashBuffer() {
+
+  if(!LittleFS.begin()) {
+    dbgPrint("LittleFS.begin() failed!");
+    //return 0;
+  }
+
+  // dbgPrint("free: "+String(getFreeHeap()));
+
+  File flashSettingsFile = LittleFS.open("settingsFlash.txt", "w");
+  //.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
+  for (int i = 0; i < sizeof(keyNames) / sizeof(keyNames[0]); i++) {
+    flashSettingsFile.println(String(keyNames[i]) + "=" + getKeyValue(keyNames[i]));
+  }
+  flashSettingsFile.close();
+
+  LittleFS.end();
+  //return 1;
+}
+
 void saveSettings() {
   dbgPrint("saveSettings()");
   File32 settingsFile;
@@ -123,6 +147,38 @@ bool setKeyValue(String line) {
     }
   }
   return false;
+}
+
+void loadSettingsFlashBuffer() {
+  File settingsFileFlash = LittleFS.open("settings.txt", "r");
+  if (!settingsFileFlash) {
+    settingsFileFlash.close();
+    saveSettingsFlashBuffer();
+    return;
+  } else {
+    if (settingsFileFlash.size() == 0) {
+      settingsFileFlash.close();
+      saveSettingsFlashBuffer();
+      return;
+    }
+    //settings file with some data in it.
+    String line = "";
+    while (settingsFileFlash.available()) {
+      char c = settingsFileFlash.read();
+      if ((c != '\n') && (c != '\r')) {
+        line += c;
+      }
+      if ((c == '\n') || (c == '\r') || (settingsFileFlash.available() == 0)) {
+        if (line.length() > 5) {
+          setKeyValue(line);
+        } else {
+          //cdc.print("Empty settings file line?: " + line);
+        }
+        line = "";
+      }
+    }
+    settingsFileFlash.close();
+  }
 }
 
 void loadSettings() {
