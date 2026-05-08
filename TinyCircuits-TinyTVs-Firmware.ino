@@ -165,7 +165,7 @@ void setup() {
   cdc.begin(115200);
   USBMSC_bus_attach_after_msc_geometry_ready();
 #endif
-  
+
 #ifndef TinyTVKit
   decHd = h264bsdAlloc();
   if (decHd != NULL) {
@@ -251,6 +251,7 @@ void loop() {
   if (USBJustConnected() && !live) {
     releaseSdCardForUSBMSC();
     setAudioSampleRate(100);
+    saveSettingsFlashBuffer();
     saveSettings(); // Save settings to SD card on USB connect
     USBMSCStart();
     for (int i = 0; i < 50; i++) {
@@ -300,7 +301,24 @@ void loop() {
     }
     //USBMSC ejected, return to video playback:
     clearPowerButtonPressInt();
-    loadSettings(); // Reload settings from SD card in case user changed them
+    //loadSettings(); // Reload settings from SD card in case user changed them
+
+    // Copy SD card settings.txt to LittleFS settings.txt
+    File32 source;
+    source.open("settings.txt", O_READ);
+
+    File dest = LittleFS.open("settings.txt", "w");
+
+    static uint8_t buf[512];
+
+    while(source.available()) {
+      size_t read = source.read(buf, 512);
+      dest.write(buf, read);
+    }
+
+    source.close();
+    dest.close();
+
     if (inputFlags.settingsChanged) {
       inputFlags.settingsChanged = false;
       saveSettingsFlashBuffer();
@@ -368,7 +386,7 @@ void loop() {
     delay(30);//allow any frames to be displayed
     resetBuffers();
     clearAudioBuffer();
-    
+
     clearDisplay();
     startTubeOffEffect();
     while (tubeOffEffect() > 3);
@@ -422,7 +440,7 @@ void loop() {
       }
     }
   }
-  
+
   if (inputFlags.channelSet) {
     dbgPrint("inputFlags.channelSet");
     inputFlags.channelSet = false;
@@ -472,7 +490,7 @@ void loop() {
       drawVolumeFor(1000);
     }
   }
-  
+
   if (TVscreenOffMode) {
 #ifndef TinyTVKit
     // Turn TV off after specified duration in screen off mode
@@ -489,7 +507,7 @@ void loop() {
 #endif
     return;
   }
-  
+
   uint64_t t1 = micros();
 
   if (showNoVideoError) {
@@ -613,10 +631,10 @@ void loop() {
         }
       }
     }
-  } 
+  }
   #ifndef TinyTVKit
   else if(isMP4StreamAvailable()) {
-    
+
     if (getMP4ToplevelError()) {
       resetMP4ToplevelError();
       dbgPrint("getMP4Toplevel error");
@@ -626,17 +644,17 @@ void loop() {
     loadNextTraf();
 
     if(!getH264DecodeReady() && getH264Ready()) {
-        
+
       if(getH264TrafCurrentSample() < getH264SampleCount()) {
         int s_size;
         getH264Sample(getFreeJPEGBuffer(), getH264TrafCurrentSample(), &s_size);
         advanceH264TrafCurrentSample();
 
         while(!frameWaitDurationElapsed()) { loadFLACDataChunk(); }
-        
+
         dbgPrint("Marking buffer filled!");
         setH264DecodeReady();
-      
+
       } else {
         H264Used();
         resetH264Traf();
@@ -648,7 +666,7 @@ void loop() {
       //dbgPrint("MP4 decode loop spinning...");
     }
   }
-  #endif 
+  #endif
   else {
     dbgPrint("No stream!!");
   }
@@ -668,7 +686,7 @@ void loop() {
       }
     }
   }
-  
+
 
 #ifdef TinyTVKit
   loop1();
@@ -746,17 +764,17 @@ int totalDroppedFrames = 0;
 #endif
 
 void setup1() {
-  
+
 }
 
 void loop1() {
 
   MSCloopCore1();
-  
+
   if (TVscreenOffMode) {
     return;
   }
-  
+
   //decode JPEG if available
   #ifndef TinyTVKit
   if (!getFilledJPEGBuffer() && !getH264DecodeReady()) {
@@ -773,19 +791,19 @@ void loop1() {
     dbgPrint("No decoder!");
     return;
   }
-  
+
   #ifndef TinyTVKit
   #endif
 
   uint64_t t0 = micros();
-  
+
   #ifndef TinyTVKit
   if(isMP4StreamAvailable()) {
 
     #ifdef TinyTV2
     //loadFLACDataChunk();
     #endif
-    
+
       /* process MP4 data in read buffer */
     if(getH264DecodeReady()) {
       uint32_t startTime = micros();
@@ -806,7 +824,7 @@ void loop1() {
       uint8_t* bufPtr = getH264SamplePtr(getH264TrafCurrentSample() - 1, &bufSize);
 
       if(bufPtr) fixAVCCStream(bufPtr, bufSize);
-      
+
       uint32_t ret_code = h264bsdDecode(decHd, bufPtr, bufSize, &frame_buffer, (u32*)(&w), (u32*)(&h));
 
       int push_ready = false;
@@ -825,7 +843,7 @@ void loop1() {
           startTime = micros() - startTime;
           dbgPrint(String("SUCCESS: Picture ready: ") + String(startTime) + "\n"); // %ld ms, f=%ld\n", end - start, clock_get_hz(clk_sys));
           dbgPrint("Total dropped frames: "+String(totalDroppedFrames));
-        
+
           uint64_t t1 = micros();
       } else if(ret_code == H264BSD_MEMALLOC_ERROR) {
         dbgPrint("ERROR: Not enough memory (core1)\n");
@@ -849,7 +867,7 @@ void loop1() {
           }
       }
     }
-  } else 
+  } else
   #endif
   if(isAVIStreamAvailable()) {
     dbgPrint("Decoding AVI stream!!");
@@ -869,7 +887,7 @@ void loop1() {
     jpeg.setPixelType(RGB565_BIG_ENDIAN);
     jpeg.setMaxOutputSize(2048);
     jpeg.decode(0, 0, 0);
-  
+
     JPEGBufferDecoded();
   }
   uint64_t t1 = micros();

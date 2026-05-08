@@ -81,7 +81,7 @@ void saveSettingsFlashBuffer() {
 
   // dbgPrint("free: "+String(getFreeHeap()));
 
-  File flashSettingsFile = LittleFS.open("settingsFlash.txt", "w");
+  File flashSettingsFile = LittleFS.open("settings.txt", "w");
   //.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
   for (int i = 0; i < sizeof(keyNames) / sizeof(keyNames[0]); i++) {
     flashSettingsFile.println(String(keyNames[i]) + "=" + getKeyValue(keyNames[i]));
