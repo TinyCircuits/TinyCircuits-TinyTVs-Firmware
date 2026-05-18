@@ -1440,3 +1440,37 @@ int loadVideoList(char * splashFN) {
   dbgPrint("");
   return aviCount;
 }
+
+// Before USB MSC serves raw sectors to the host, close all Fat32 file handles and flush caches.
+// Leaving infile open during playback caused raw readSectors() to fight SdFat's volume cache; macOS
+// then failed to mount (Disk Utility: Not Mounted, 0 B) while Windows often still worked.
+void releaseSdCardForUSBMSC() {
+#ifndef TinyTVKit
+  while (!display.getReadyStatusDMA()) {
+#ifdef ARDUINO_ARCH_RP2040
+    msc_yield_usb_only();
+#else
+    yield();
+#endif
+  }
+  while (getFilledJPEGBuffer()) {
+#ifdef ARDUINO_ARCH_RP2040
+    msc_yield_usb_only();
+#else
+    yield();
+#endif
+  }
+  if (isMP4StreamAvailable()) {
+    while (getH264DecodeReady()) {
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
+      yield();
+#endif
+    }
+  }
+#endif
+  infile.close();
+  sd.card()->syncDevice();
+  sd.cacheClear();
+}

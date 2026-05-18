@@ -1,5 +1,36 @@
 //-------------------------------------------------------------------------------
 //  TinyCircuits TinyTV Firmware
+
+#ifdef ARDUINO_ARCH_RP2040
+#include "Adafruit_TinyUSB_API.h"
+#include "tusb.h"
+// Arduino yield() calls TinyUSB_Device_Task() then TinyUSB_Device_FlushCDC().
+// CDC TX flush during MSC starves composite traffic on macOS; run USB stack only.
+static inline void msc_yield_usb_only(void) {
+  TinyUSB_Device_Task();
+  TinyUSB_Device_Task();
+}
+
+// main.cpp calls TinyUSB_Device_Init() before setup(). The host can finish enumerating
+// that first configuration (CDC from TinyUSBDevice.begin) while setup() still runs.
+// setup() then clears descriptors and adds CDC + MSC — but without a detach/attach the
+// host keeps the old view (Adafruit TinyUSB issue #96). macOS then shows MSC in Disk
+// Utility but fails to mount the FAT volume. Drop D+ pull-up before rebuilding interfaces,
+// and re-enable only after READ CAPACITY data (block_count) is valid.
+static inline void USBMSC_bus_detach_before_rebuild(void) {
+  if (tud_inited()) {
+    tud_disconnect();
+    delay(20);
+  }
+}
+
+static inline void USBMSC_bus_attach_after_msc_geometry_ready(void) {
+  if (tud_inited()) {
+    tud_connect();
+    delay(10);
+  }
+}
+#endif
 //
 //  Changelog:
 //  03/25/2026 MP4 playback update
@@ -32,8 +63,14 @@ const bool secondCoreSD = false;
 uint32_t lastMSCRead = 0;
 uint32_t lastMSCWrite = 0;
 
+bool lastState = false;
+bool ended = false;
+
 int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 {
+  if (bufsize == 0 || (bufsize % 512) != 0) {
+    return -1;
+  }
   if (secondCoreSD /*&& !ejected*/ ) {
     while (lbaToWriteCount || lbaToReadCount);
     volatile int count = bufsize / 512;
@@ -54,6 +91,9 @@ int32_t msc_read_cb(uint32_t lba, void* buffer, uint32_t bufsize)
 // return number of written bytes (must be multiple of block size)
 int32_t msc_write_cb(uint32_t lba, uint8_t* buffer, uint32_t bufsize)
 {
+  if (bufsize == 0 || (bufsize % 512) != 0) {
+    return -1;
+  }
   if (secondCoreSD /* && !ejected*/ ) {
     while (lbaToWriteCount || lbaToReadCount);
     memcpy(lbaWriteBuff, buffer, bufsize);
@@ -99,26 +139,13 @@ extern void displayNoVideosFound();
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
 {
   (void) lun;
-  //(void) power_condition;
-  //  cdc.print(power_condition);
-  //  cdc.print(" ");
-  //  cdc.print(load_eject);
-  //  cdc.print(" ");
-  //  cdc.println(start);
-
-  //ejected = true;
-
-  if (load_eject)
-  {
-    if (start)
-    {
-      mscStart = true;
-    }
-    else
-    {
-      ejected = true;
-      //return false;
-    }
+  (void) power_condition;
+  // Embedded microSD: acknowledge START STOP UNIT but do not set ejected on load_eject+!start.
+  // macOS sends that sequence during mount / diskarbitration; the old code set ejected=true,
+  // handleUSBMSC() then removed MSC callbacks while the LUN stayed enumerated — Disk Utility
+  // showed TINYTV as Not Mounted with 0 B free until replug.
+  if (load_eject && start) {
+    mscStart = true;
   }
   return true;
 }
@@ -137,13 +164,6 @@ void USBMSCReady() {
   usb_msc.setCapacity(block_count, 512);
 }
 
-bool lastState = false;
-
-int count = 0;
-int timer = 0;
-bool ended = false;
-
-
 bool USBJustConnected() {
   if (tud_connected()) {
     if (lastState == false && ejected == false) {
@@ -158,8 +178,6 @@ bool USBJustConnected() {
 }
 
 void USBMSCStart() {
-  count = 0;
-  timer = millis();
   mscActive = true;
   usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
   usb_msc.setUnitReady(true);
@@ -182,28 +200,73 @@ bool USBMSCRecentActivity() {
 
 bool handleUSBMSC(bool stopMSC) {
   if (mscActive) {
-    //tud_ready doesn't seem to work, rely on ejected- doesn't seem to work in macos?
-    if (count < 100 && !stopMSC && !ejected) {
-      if ((millis() - timer > 1000) && !tud_ready() ) {
-        count++;
-        delay(1);
-      } else {
-        count = 0;
-      }
-      yield();
-      return true;
-    }
+    // Remain in MSC until the user stops (power) or USB disconnects. Do not use ejected from
+    // START STOP UNIT — macOS uses that during probe (see tud_msc_start_stop_cb).
+    // Avoid tud_ready(): on macOS it often stays false during normal MSC use.
+    //
+    // Stay active while SET_CONFIGURATION is pending: tud_mounted() may be false briefly even
+    // though the cable is attached (tud_connected). After bus resets, tud_connected() can also
+    // glitch false for a few hundred ms — debounce before treating that as unplug so we do not
+    // tear down MSC and strand the user (power would still set stopMSC).
+#ifdef ARDUINO_ARCH_RP2040
+    static uint32_t mscDisconnectDebounceStart = 0;
+    const uint32_t kMscDisconnectHoldMs = 500;
+#endif
 
+    if (!stopMSC) {
+      if (tud_mounted()) {
+#ifdef ARDUINO_ARCH_RP2040
+        mscDisconnectDebounceStart = 0;
+        msc_yield_usb_only();
+#else
+        yield();
+#endif
+        return true;
+      }
+      if (tud_connected()) {
+#ifdef ARDUINO_ARCH_RP2040
+        mscDisconnectDebounceStart = 0;
+        msc_yield_usb_only();
+#else
+        yield();
+#endif
+        return true;
+      }
+#ifdef ARDUINO_ARCH_RP2040
+      // Unplug: no link — but wait out brief post-reset glitches.
+      uint32_t now = millis();
+      if (mscDisconnectDebounceStart == 0) {
+        mscDisconnectDebounceStart = now;
+      }
+      if ((uint32_t)(now - mscDisconnectDebounceStart) < kMscDisconnectHoldMs) {
+        msc_yield_usb_only();
+        return true;
+      }
+      mscDisconnectDebounceStart = 0;
+#endif
+    } else {
+#ifdef ARDUINO_ARCH_RP2040
+      mscDisconnectDebounceStart = 0;
+#endif
+    }
 
     for (int i = 0; i < 50 || USBMSCRecentActivity(); i++) {
       delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
       yield();
+#endif
     }
     usb_msc.setUnitReady(false);
     usb_msc.setReadWriteCallback(nullptr, nullptr, nullptr);
     for (int i = 0; i < 50 || USBMSCRecentActivity(); i++) {
       delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
       yield();
+#endif
     }
     mscActive = false;
     sd.card()->syncDevice();

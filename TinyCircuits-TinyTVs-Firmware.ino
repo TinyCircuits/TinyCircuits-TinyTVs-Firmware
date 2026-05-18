@@ -127,6 +127,7 @@ extern "C" {
 
 void setup() {
 #ifdef has_USB_MSC
+  USBMSC_bus_detach_before_rebuild();
   Serial.end();
   cdc.begin(0);
   // Do MSC setup quickly so PC recognizes us as a mass storage device
@@ -142,6 +143,11 @@ void setup() {
   //dbgPrint("Initialized HW");
 
   if (!initializeSDcard()) {
+#ifdef has_USB_MSC
+    // Happy path calls this after USBMSCReady(); without SD we never get there — still
+    // attach so CDC works for the error loop.
+    USBMSC_bus_attach_after_msc_geometry_ready();
+#endif
     displayCardNotFound();
     while (1) {
       uint16_t totalJPEGBytesUnused;
@@ -157,6 +163,7 @@ void setup() {
 #ifdef has_USB_MSC
   USBMSCReady();
   cdc.begin(115200);
+  USBMSC_bus_attach_after_msc_geometry_ready();
 #endif
   
 #ifndef TinyTVKit
@@ -238,10 +245,16 @@ void initVideoPlayback(bool loadSettingsFile) {
 void loop() {
 #ifdef has_USB_MSC
   if (USBJustConnected() && !live) {
+    releaseSdCardForUSBMSC();
     setAudioSampleRate(100);
     USBMSCStart();
     for (int i = 0; i < 50; i++) {
-      delay(1); yield();
+      delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
+      yield();
+#endif
     }
     if (TVscreenOffMode) {
       TVscreenOffMode = false;
@@ -250,21 +263,24 @@ void loop() {
     displayUSBMSCmessage();
   }
   if (handleUSBMSC(powerButtonPressed())) {
-    //USBMSC active, handle CDC commands except for filling frames:
-    uint16_t totalJPEGBytesUnused;
-    if (getFreeJPEGBuffer()) {
-      if (incomingCDCHandler(getFreeJPEGBuffer(), VIDEOBUF_SIZE, &live, &totalJPEGBytesUnused)) {
-        handleUSBMSC(true);
-      }
-    } else {
-      incomingCDCHandler(NULL, 0, &live, &totalJPEGBytesUnused);
-    }
+    // Do not run incomingCDCHandler() during MSC (see USB_MSC / MACOS_USB_STORAGE).
+    // Do not use yield() here: it flushes CDC TX every time and breaks MSC on macOS composite.
+#ifdef ARDUINO_ARCH_RP2040
+    msc_yield_usb_only();
+#else
+    yield();
+#endif
     return;
   }
   if (USBMSCJustStopped()) {
     dbgPrint("MSC Stopped");
     for (int i = 0; i < 50; i++) {
-      delay(1); yield();
+      delay(1);
+#ifdef ARDUINO_ARCH_RP2040
+      msc_yield_usb_only();
+#else
+      yield();
+#endif
     }
     //USBMSC ejected, return to video playback:
     clearPowerButtonPressInt();
