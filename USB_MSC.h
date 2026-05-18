@@ -57,7 +57,7 @@ uint8_t lbaWriteBuff[512 * 8];
 
 uint32_t sectorLBACount = 1;
 
-const bool secondCoreSD = false;
+const bool secondCoreSD = true;
 
 
 uint32_t lastMSCRead = 0;
