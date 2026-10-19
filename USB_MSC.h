@@ -136,9 +136,8 @@ void msc_flush_cb(void)
 extern "C" {
 #endif
 extern void displayNoVideosFound();
-bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject)
+bool msc_start_stop_cb(uint8_t power_condition, bool start, bool load_eject)
 {
-  (void) lun;
   (void) power_condition;
   // Embedded microSD: acknowledge START STOP UNIT but do not set ejected on load_eject+!start.
   // macOS sends that sequence during mount / diskarbitration; the old code set ejected=true,
@@ -180,6 +179,7 @@ bool USBJustConnected() {
 void USBMSCStart() {
   mscActive = true;
   usb_msc.setReadWriteCallback(msc_read_cb, msc_write_cb, msc_flush_cb);
+  usb_msc.setStartStopCallback(msc_start_stop_cb);
   usb_msc.setUnitReady(true);
 }
 bool USBMSCJustStopped() {

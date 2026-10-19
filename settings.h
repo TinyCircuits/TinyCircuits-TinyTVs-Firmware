@@ -2,6 +2,7 @@
 //  TinyCircuits TinyTV Firmware
 //
 //  Changelog:
+//  10/19/2026 MP4 playback bugfixes, performance improvements, settings-saving behavior changed
 //  03/25/2026 MP4 playback update
 //  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
@@ -95,10 +96,16 @@ void saveSettingsFlashBuffer() {
 void saveSettings() {
   dbgPrint("saveSettings()");
   File32 settingsFile;
-  settingsFile.open("settings.txt", O_WRITE | O_CREAT | O_TRUNC);
+  settingsFile.open("settings.txt", O_WRITE | O_CREAT);
+  //dbgPrint("Saving "+String(sizeof(keyNames) / sizeof(keyNames[0]))+" entries");
+  int t0 = millis();
   for (int i = 0; i < sizeof(keyNames) / sizeof(keyNames[0]); i++) {
+    //dbgPrint(String(keyNames[i]) + "=" + getKeyValue(keyNames[i]));
     settingsFile.println(String(keyNames[i]) + "=" + getKeyValue(keyNames[i]));
+    //settingsFile.write(String(String(keyNames[i]) + "=" + getKeyValue(keyNames[i])).c_str());
   }
+  int t1 = millis();
+  dbgPrint("Wrote settings in "+String(t1-t0)+"ms");
   settingsFile.close();
 }
 

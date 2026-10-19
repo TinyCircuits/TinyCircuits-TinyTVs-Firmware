@@ -7,6 +7,7 @@
 //  USB Stack: Adafruit TinyUSB
 //
 //  Changelog:
+//  10/19/2026 MP4 playback bugfixes, performance improvements, settings-saving behavior changed
 //  03/25/2026 MP4 playback update
 //  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
@@ -127,6 +128,7 @@ extern "C" {
 // #endif
 
 void setup() {
+
 #ifdef has_USB_MSC
   USBMSC_bus_detach_before_rebuild();
   Serial.end();
@@ -141,7 +143,7 @@ void setup() {
   initializeInfrared();
   initializeDisplay();
   initalizePins();
-  //dbgPrint("Initialized HW");
+  dbgPrint("Initialized HW");
 
   if (!initializeSDcard()) {
 #ifdef has_USB_MSC
@@ -166,6 +168,8 @@ void setup() {
   cdc.begin(115200);
   USBMSC_bus_attach_after_msc_geometry_ready();
 #endif
+
+//delay(2000);
   
 #ifndef TinyTVKit
   decHd = h264bsdAlloc();
@@ -781,7 +785,7 @@ bool frameWaitDurationElapsed() {
 }
 
 #ifndef TinyTVKit
-__attribute__((aligned(4))) uint16_t singleLineBuf[2][4096];
+__attribute__((aligned(4))) uint16_t singleLineBuf[2][6144];
 int lineBufIdx = 0;
 uint8_t* oldFramePtr = NULL;
 int totalDroppedFrames = 0;

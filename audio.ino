@@ -2,6 +2,7 @@
 //  TinyCircuits TinyTV Firmware
 //
 //  Changelog:
+//  10/19/2026 MP4 playback bugfixes, performance improvements, settings-saving behavior changed
 //  03/25/2026 MP4 playback update
 //  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed

@@ -1,3 +1,10 @@
+1.3.1
+*Fix MSC mount failures on MacOS - thanks, boyetucker
+*Change saveSettings() behavior to on-USB connect
+*Fix short videos halting when trying to loop during seek
+*Fix volume / channel number font rendering in MP4 playback
+*Reduce MP4 playback audio latency
+
 1.3.0
 *Add MP4 playback support
 

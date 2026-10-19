@@ -2,6 +2,7 @@
 //  TinyCircuits TinyTV Firmware
 //
 //  Changelog:
+//  10/19/2026 MP4 playback bugfixes, performance improvements, settings-saving behavior changed
 //  03/25/2026 MP4 playback update
 //  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
@@ -98,18 +99,18 @@ void drawVolumeLineBuffer(uint16_t* line, int y) {
       if (VIDEO_H > 64) {
         if(y >= VIDEO_H-48) {
   
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setWidth(VIDEO_W);
           screenBuffer.setY(0, 1);
           screenBuffer.setBuffer((uint8_t *)line);
           
-          screenBuffer.setCursor((VIDEO_W / 2) - 18, VIDEO_H - 48 - y);
+          screenBuffer.setCursor((VIDEO_W / 2) - 18, VIDEO_H - 47 - y);
           screenBuffer.print(getVolumeString());
         }
       } else {
         if(y >= VIDEO_H-24) {
   
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setWidth(VIDEO_W);
           screenBuffer.setY(0, 1);
           screenBuffer.setBuffer((uint8_t *)line);
@@ -159,7 +160,7 @@ void drawChannelNumberLineBuffer(uint16_t* line, int y) {
       sprintf(buf, "CH%.2i", channelNumber);
       if (VIDEO_H > 64) {
         if (y > 5) {
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setWidth(VIDEO_W);
           screenBuffer.setY(0, 1);
           screenBuffer.setBuffer((uint8_t *)line);
@@ -169,7 +170,7 @@ void drawChannelNumberLineBuffer(uint16_t* line, int y) {
         }
       } else {
         if (y > 1) {
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setWidth(VIDEO_W);
           screenBuffer.setY(0, 1);
           screenBuffer.setBuffer((uint8_t *)line);
@@ -189,7 +190,7 @@ void drawChannelNumber(JPEGDRAW* block) {
       sprintf(buf, "CH%.2i", channelNumber);
       if (IMG_H > 64) {
         if (block->y < 20 && block->y > 10 && block->x + block->iWidth > IMG_W - 10) {
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setCursor(IMG_W - 55 - block->x, /*16 - block->y*/0);
           screenBuffer.print(buf);
         }
@@ -199,7 +200,7 @@ void drawChannelNumber(JPEGDRAW* block) {
           if (IMG_W == 64) {
             xOffset = 32;
           }
-          screenBuffer.setFont(thinPixel7_10ptFontInfo);
+          //screenBuffer.setFont(thinPixel7_10ptFontInfo);
           screenBuffer.setCursor(IMG_W - xOffset - block->x, 5 - block->y);
           screenBuffer.print(buf);
         }

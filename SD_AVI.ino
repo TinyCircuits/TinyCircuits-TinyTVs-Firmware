@@ -2,6 +2,7 @@
 //  TinyCircuits TinyTV Firmware
 //
 //  Changelog:
+//  10/19/2026 MP4 playback bugfixes, performance improvements, settings-saving behavior changed
 //  03/25/2026 MP4 playback update
 //  05/26/2023 Initial Release for TinyTV 2/Mini
 //  02/08/2023 Cross-platform base committed
@@ -349,7 +350,7 @@ int getMP4VideoInfo(int startTimeOffsetS, storage_t* h264Dec, fx_flac_t* flacDec
   
   resetMP4SeekTime();
   //seekTimeMP4(0);
-  seekTimeMP4(1000*startTimeOffsetS);
+  seekTimeMP4(1000*startTimeOffsetS, 1);
   
   return 1;
 }
@@ -434,7 +435,7 @@ int getMP4NextTopLevel() {
   return 1;
 }
 
-void seekTimeMP4(int seekMs) {
+void seekTimeMP4(int seekMs, int loopNearEnd) {
   int p0 = infile.position();
   infile.seekSet(infile.size()-4);
   uint8_t mfraOffBuf[4];
@@ -467,9 +468,9 @@ void seekTimeMP4(int seekMs) {
   int moofOffset = getLongLE(tfraElemBuf+8);
   uint32_t totalMediaTimeMs = (tfraTime * sampleDefaultDuration / MP4Timescale);
   unsigned int timeOffset = seekMs % totalMediaTimeMs;
-  if((totalMediaTimeMs-timeOffset) < (15*1000)) {
+  if((totalMediaTimeMs-timeOffset) < (15*1000) && loopNearEnd) {
     infile.seekSet(p0);
-    seekTimeMP4(0); // Loop if less than 15s of video remaining
+    seekTimeMP4(0, 0); // Loop if less than 15s of video remaining
     return;
   }
   seekMs %= totalMediaTimeMs;
@@ -1047,6 +1048,7 @@ int skipToFrameAVI2_0(uint32_t framesToSkip, uint32_t * aviMoviListFrameCount) {
   uint32_t moviListOffset = 0;
   int baseOffsetToUse = 0;
   while (baseOffsetToUse < aviMoviListCount && framesToSkip > aviMoviListFrameCount[baseOffsetToUse]) {
+    dbgPrint("Skipping "+String(aviMoviListFrameCount[baseOffsetToUse])+" frames");
     framesToSkip -= aviMoviListFrameCount[baseOffsetToUse];
     aviMoviListPos++;
     baseOffsetToUse++;
@@ -1055,6 +1057,7 @@ int skipToFrameAVI2_0(uint32_t framesToSkip, uint32_t * aviMoviListFrameCount) {
   // The next uint32 is number of entries, next 4 bytes are id, next uint64 is base offset, next 4 bytes reserved, then index data.
   // Index entries are 32 bit offset in file, 32 bit size
   int timer2 = millis();
+  dbgPrint("seeking to offset...");
   infile.seekSet(aviMoviListOffsets[aviMoviListPos]);
   dbgPrint("seek time " + String(millis() - timer2));
   uint8_t chunkData[32];
@@ -1079,7 +1082,7 @@ int skipToFrameAVI2_0(uint32_t framesToSkip, uint32_t * aviMoviListFrameCount) {
   return 0;
 }
 
-int getVideoInfo(int startTimeOffsetS) {
+int getVideoInfo(int startTimeOffsetS, int loopLongVideo) {
   int chunkCount = 0;
   uint8_t chunkHeader[12];
   currentAudioRate = 0;
@@ -1134,10 +1137,12 @@ int getVideoInfo(int startTimeOffsetS) {
       dbgPrint("Found avih");
       infile.seekCur(28);
       if (infile.read(chunkHeader, 4) != 4) {
+        dbgPrint("Failed to read frameWidth chunkHeader!");
         return 1;
       }
       frameWidth = getIntBE(chunkHeader);
       if (infile.read(chunkHeader, 4) != 4) {
+        dbgPrint("Failed to read frameHeight chunkHeader!");
         return 1;
       }
       frameHeight = getIntBE(chunkHeader);
@@ -1185,9 +1190,9 @@ int getVideoInfo(int startTimeOffsetS) {
         frameRate = getIntBE(chunkData + 20);
         totalFrames = getIntBE(chunkData + 28);
         unsigned int timeOffset = (startTimeOffsetS * frameRate) % totalFrames;
-        if((totalFrames / frameRate - timeOffset) < 15) {
+        if((totalFrames / frameRate - timeOffset) < 15 && loopLongVideo) {
           infile.seekSet(p0);
-          return getVideoInfo(0); // Loop if less than 15s of video remaining
+          return getVideoInfo(0, 0); // Loop if less than 15s of video remaining
         }
         skipBytes -= 32;
       }
@@ -1355,7 +1360,7 @@ while (!display.getReadyStatusDMA()) {}
   infile.getSFN(fileName, 13);
   if (!strcmp(fileName + strlen(fileName) - 4, ".avi") || !strcmp(fileName + strlen(fileName) - 4, ".AVI")) {
     setAVIScreenBuffer();
-    if (getVideoInfo(startTimeS)) {
+    if (getVideoInfo(startTimeS, 1)) {
       dbgPrint("Error finding stream info or read error");
       return 3;
     }
