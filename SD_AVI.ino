@@ -822,7 +822,10 @@ void getFLACSample(uint8_t* sampleBuf, int s, uint32_t* size) {
     *size = trafDefaultSampleSize;
   }
   dbgPrint("Copying FLAC sample from "+String(flacSampleOffsets[s]));
-  memcpy(sampleBuf, flacBuf+flacSampleOffsets[s], *size);
+  // sampleBuf is flacBuf itself, so source and destination overlap whenever a
+  // chunk is longer than its offset (typically chunk 1 of a fragment). memcpy is
+  // undefined for overlapping regions and corrupts the frame here; use memmove.
+  memmove(sampleBuf, flacBuf+flacSampleOffsets[s], *size);
 }
 
 void skipToMoof() {
