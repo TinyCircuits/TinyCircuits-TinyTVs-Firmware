@@ -648,6 +648,12 @@ void loadNextTraf() {
     }
     
     if(loadFLACTraf) {
+      // Decode any FLAC chunks still pending from the previous fragment first:
+      // loadMP4TrackFragment(0) below overwrites the FLAC traf buffer (chunk sizes)
+      // and infile.read() overwrites flacBuf (chunk data), so leftover chunks would
+      // otherwise be decoded from the new fragment's bytes at the old offsets.
+      while(!loadFLACDataChunk()) { yield(); }
+
       loadMP4TrackFragment(0); // Don't overwrite h264 data
       
       if(getFLACReady()) {
